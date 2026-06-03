@@ -2,31 +2,37 @@
 
 Last updated: 2026-06-03
 
-## Latest Workflow Run
+## Latest Automated Workflow Attempt
 
 - Command: `python .\agent.py --root . --task workspace\task.txt --model qwen2.5-coder:7b`
+- Result: failed
+- Failure mode: the generated patch contained malformed indentation and did not produce a valid target file
+
+## Latest Repository Validation
+
+- Command: `python -m unittest discover -s tests`
 - Result: completed successfully
-- Test output: `workspace/test_result.txt`
-- Git diff output: `workspace/git_diff.txt`
-
-## Latest Test Result
-
 - Test runner: `unittest` fallback
-- Result: 2 tests passed
+- Outcome: 13 tests passed
 
-Observed output:
+## Latest Functional Change
 
-- `Ran 2 tests`
-- `OK`
+`demo_add.py` now enforces numeric inputs:
 
-## Latest Code Change
-
-The demo task updated `demo_add.py` with a non-functional comment change:
-
+- `if not isinstance(a, (int, float)) or not isinstance(b, (int, float))`
+- `raise TypeError("Both arguments must be numeric")`
 - `return a + b`
-- `return a + b  # Ensure the function signature remains unchanged`
+
+## Failure-Case Coverage Added
+
+The core test suite now covers:
+
+- SEARCH blocks that match multiple locations
+- SEARCH blocks that do not exist in the target file
+- Git Guard blocking unauthorized file changes
+- Workflow rollback when tests fail
 
 ## Notes
 
-- `workspace/` is ignored by git, so the latest runtime artifacts stay local.
-- This document is the repository-facing summary of the latest test status.
+- `workspace/` is ignored by git, so runtime artifacts stay local.
+- The repository now has both success-path coverage and failure-path coverage.

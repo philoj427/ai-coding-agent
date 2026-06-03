@@ -1,2 +1,4 @@
 def add(a, b):
-    return a + b  # Ensure the function signature remains unchanged
+    if not isinstance(a, (int, float)) or not isinstance(b, (int, float)):
+        raise TypeError("Both arguments must be numeric")
+    return a + b
