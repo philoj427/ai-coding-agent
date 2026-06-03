@@ -70,3 +70,16 @@ This repository includes:
 - a demo task and demo tests
 - the three original architecture documents
 
+## Current Status
+
+The latest validated state is:
+
+- one end-to-end workflow run that produced a real diff in `demo_add.py`
+- no-op patches are rejected before test execution
+- SEARCH/REPLACE parsing preserves indentation and rejects ambiguous matches
+- Git Guard blocks unauthorized staged, untracked, and diff-visible files
+- repo cleanup restores the worktree to `HEAD` on failure
+- Python target files are syntax-checked with `py_compile`
+- the current test suite passes with `unittest`
+
+See [TEST_STATUS.md](TEST_STATUS.md) for the latest run details.
