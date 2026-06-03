@@ -1,27 +1,23 @@
 # AI Coding Agent
 
-Local-first AI coding agent prototype based on the V1.35 architecture review.
+Local-first AI coding agent prototype for safe, single-file patching with local Ollama.
 
 ## Goals
 
-- Keep changes small and patch-based.
-- Enforce safety rules in Python.
-- Validate before review.
-- Stay local-first and easy to inspect.
+- Small, patch-based changes.
+- Python-enforced safety checks.
+- Test before review.
+- Local-first and easy to inspect.
 
 ## Workflow
 
-The agent reads `workspace/task.txt`, builds a context pack, sends it to a local Ollama model, applies a strict `SEARCH` / `REPLACE` patch, runs the selected tests, and records the result under `workspace/`.
+Read `workspace/task.txt`, build a context pack, send it to local Ollama, apply a strict `SEARCH` / `REPLACE` patch, run tests, and record the result under `workspace/`.
 
-If patching or tests fail, it rolls back the target file and restores a clean worktree.
+If patching or tests fail, the agent rolls back the target file and restores a clean worktree.
 
 ## Task Format
 
 `target_file | test_type | test_file | task_description`
-
-Example:
-
-`app.py | pytest | tests/test_app.py | Implement divide(a, b) with divide-by-zero protection`
 
 Supported `test_type` values:
 
@@ -41,29 +37,14 @@ Optional flags:
 - `--ollama-host http://localhost:11434`
 - `--dry-run`
 
-## Output Files
-
-- `workspace/context_pack.md`
-- `workspace/search_replace.patch`
-- `workspace/test_result.txt`
-- `workspace/git_diff.txt`
-
 ## Safety Rules
 
-- The repository must be clean before execution.
+- Repo must be clean before execution.
 - `workspace/` is ignored by git.
-- Only one target file is supported in V1.35.
+- V1.35 supports one target file only.
 - SEARCH blocks must match exactly one location.
-- Failed tests trigger rollback of the target file.
+- Failed tests trigger rollback.
 - No automatic commit is performed.
-
-## Repository Status
-
-This repository includes:
-
-- the agent prototype implementation
-- a demo task and demo tests
-- the three original architecture documents
 
 ## Current Status
 
@@ -72,3 +53,10 @@ This repository includes:
 - Safety gates: no-op patch rejection, strict SEARCH/REPLACE matching, Git Guard, rollback, and `py_compile`
 
 See [TEST_STATUS.md](TEST_STATUS.md) for the latest run details and failure coverage.
+
+## Output Files
+
+- `workspace/context_pack.md`
+- `workspace/search_replace.patch`
+- `workspace/test_result.txt`
+- `workspace/git_diff.txt`
