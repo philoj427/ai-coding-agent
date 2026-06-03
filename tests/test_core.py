@@ -5,6 +5,7 @@ from unittest import mock
 
 from ai_coding_agent.context_builder import build_context_pack
 from ai_coding_agent.builder import build_prompt
+from ai_coding_agent.builder import _strip_code_fences
 from ai_coding_agent.git_guard import GitGuardError, ensure_clean_worktree, validate_allowed_changes
 from ai_coding_agent.patch_applier import PatchParseError
 from ai_coding_agent.patch_applier import apply_search_replace_patch
@@ -21,6 +22,13 @@ class TestCore(unittest.TestCase):
         self.assertIn("Patch must change the target file contents.", prompt)
         self.assertIn("Do not change indentation on a line unless the line content also changes.", prompt)
         self.assertTrue(prompt.endswith("\n"))
+
+    def test_strip_code_fences(self):
+        patch = "```text\nSEARCH\nold\nEND_SEARCH\nREPLACE\nnew\nEND_REPLACE\n```\n"
+        self.assertEqual(
+            _strip_code_fences(patch),
+            "SEARCH\nold\nEND_SEARCH\nREPLACE\nnew\nEND_REPLACE",
+        )
 
     def test_task_parse(self):
         task = TaskSpec.from_text("app.py | pytest | tests/test_app.py | Implement divide")

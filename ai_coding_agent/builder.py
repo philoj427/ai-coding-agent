@@ -28,6 +28,13 @@ def build_prompt(context_pack: str) -> str:
     return f"{SYSTEM_PROMPT}\n\n{context_pack}\n"
 
 
+def _strip_code_fences(text: str) -> str:
+    lines = text.splitlines()
+    if len(lines) >= 2 and lines[0].lstrip().startswith("```") and lines[-1].strip() == "```":
+        return "\n".join(lines[1:-1])
+    return text
+
+
 def generate_patch(model: str, prompt: str, ollama_host: str = "http://localhost:11434") -> str:
     payload = json.dumps({
         "model": model,
@@ -43,6 +50,6 @@ def generate_patch(model: str, prompt: str, ollama_host: str = "http://localhost
     try:
         with urlopen(request, timeout=600) as response:
             body = json.loads(response.read().decode("utf-8"))
-            return body["response"]
+            return _strip_code_fences(body["response"].strip())
     except URLError as exc:
         raise RuntimeError(f"Failed to contact Ollama at {ollama_host}: {exc}") from exc
