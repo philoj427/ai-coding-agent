@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,9 +26,14 @@ def run_tests(root: Path, test_type: str, test_file: Path | None, workspace_dir:
         return result
 
     if test_type == "pytest":
-        cmd = [sys.executable, "-m", "pytest"]
-        if test_file is not None:
-            cmd.append(str((root / test_file).resolve()))
+        if shutil.which("pytest") is not None:
+            cmd = [sys.executable, "-m", "pytest"]
+            if test_file is not None:
+                cmd.append(str((root / test_file).resolve()))
+        else:
+            cmd = [sys.executable, "-m", "unittest", "discover", "-s", "tests"]
+            if test_file is not None:
+                cmd.extend(["-p", Path(test_file).name])
     elif test_type == "npm test":
         cmd = ["npm", "test"]
     else:
