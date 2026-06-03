@@ -1,52 +1,35 @@
 # Test Status
 
-Last updated: 2026-06-03
-
 ## Summary
 
-- Latest workflow run failed because Gatekeeper rejected a malformed docstring patch.
-- The latest failure report includes stage and reason.
-- The current test suite passes with 29 tests.
+- Latest workflow attempt completed with a real patching path using local exact SEARCH candidates.
+- The agent no longer asks Ollama to invent SEARCH text.
+- Latest unit test suite result: 32 tests passed.
 
-## Workflow Result
+## Latest Automated Workflow Attempt
 
-- Command: `python .\agent.py --root . --task workspace\task.txt --model qwen2.5-coder:7b`
 - Result: failed
-- Stage: gatekeeper
-- Reason: Module docstring must be separated from top-level defs by a blank line
-- Patch: malformed docstring spacing patch
+- Run: `python .\run_pressure_tests.py`
+- Tasks: 50
+- Outcome: 21 passed, 29 failed
 
-## Verification
+## Latest Failure Pattern
 
-- Command: `python -m unittest discover -s tests`
-- Result: success
-- Runner: `unittest` fallback
-- Outcome: 29 tests passed
+- `SEARCH block must match exactly one location, found 0`
+- `py_compile` syntax validation failures
+- test failures from real regressions
+- malformed or incomplete patch output
 
 ## Safety Coverage
 
-The core suite covers:
-
-- SEARCH blocks that match multiple locations
-- SEARCH blocks that do not exist in the target file
-- No-op patch rejection
-- Line-level indentation-only rejection
-- Gatekeeper pre-application rejection
-- Retry once after malformed patch output
-- Structured failure reports with stage and reason
-- Duplicate top-level function rejection
-- Module docstring spacing rejection
-- Git Guard blocking unauthorized staged files
-- Git Guard blocking unauthorized untracked files
-- Workflow rollback when tests fail
-- Workflow repo cleanup after test failure
-- Builder prompt hardening
-- Patch parse retry once
-- Python syntax validation with `py_compile`
-- Cleanup of `__pycache__` artifacts
+- SEARCH/REPLACE parsing preserves indentation
+- `count == 1` enforcement remains active
+- Git Guard still blocks unstaged, staged, and untracked unauthorized files
+- test failure cleanup still restores the repo
+- `py_compile` validation still runs for Python targets
+- `__pycache__` cleanup still runs after successful syntax validation
 
 ## Notes
 
-- `workspace/` is ignored by git, so runtime artifacts stay local.
-- Failure cleanup restores the repo to `HEAD` and removes stray untracked files.
-- Python target files are syntax-checked, and generated `__pycache__` artifacts are removed.
+- The new local candidate layer is the current architectural change under evaluation.
+- It reduced reliance on model-generated SEARCH text, but it has not yet improved pressure pass rate.
