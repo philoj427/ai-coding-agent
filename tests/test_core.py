@@ -123,6 +123,40 @@ class TestCore(unittest.TestCase):
             with self.assertRaises(GitGuardError):
                 validate_allowed_changes(root, {allowed})
 
+    def test_validate_allowed_changes_blocks_staged_unauthorized_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._init_git_repo(root)
+
+            allowed = root / "allowed.py"
+            other = root / "other.py"
+            allowed.write_text("print('a')\n", encoding="utf-8")
+            other.write_text("print('b')\n", encoding="utf-8")
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-m", "baseline")
+
+            other.write_text("print('b2')\n", encoding="utf-8")
+            self._git(root, "add", "other.py")
+
+            with self.assertRaises(GitGuardError):
+                validate_allowed_changes(root, {allowed})
+
+    def test_validate_allowed_changes_blocks_untracked_unauthorized_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._init_git_repo(root)
+
+            allowed = root / "allowed.py"
+            allowed.write_text("print('a')\n", encoding="utf-8")
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-m", "baseline")
+
+            rogue = root / "rogue.py"
+            rogue.write_text("print('rogue')\n", encoding="utf-8")
+
+            with self.assertRaises(GitGuardError):
+                validate_allowed_changes(root, {allowed})
+
     def test_ensure_clean_worktree_accepts_clean_repo(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -181,6 +215,68 @@ class TestCore(unittest.TestCase):
                 )
 
             self.assertEqual(exit_code, 1)
+            self.assertEqual(
+                target.read_text(encoding="utf-8"),
+                "def greet(name):\n    return f'Hello {name}'\n",
+            )
+            self.assertEqual(
+                (root / "workspace" / "git_diff.txt").read_text(encoding="utf-8"),
+                "",
+            )
+
+    def test_run_workflow_cleans_untracked_file_on_test_failure(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._init_git_repo(root)
+
+            target = root / "demo.py"
+            target.write_text(
+                "def greet(name):\n"
+                "    return f'Hello {name}'\n",
+                encoding="utf-8",
+            )
+            task_file = root / "task.txt"
+            task_file.write_text(
+                "demo.py | pytest | tests/test_demo.py | Make greet add punctuation.\n",
+                encoding="utf-8",
+            )
+            (root / "tests").mkdir()
+            (root / "tests" / "test_demo.py").write_text("import unittest\n", encoding="utf-8")
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-m", "baseline")
+
+            patch = (
+                "SEARCH\n"
+                "    return f'Hello {name}'\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "    return f'Hello {name}!'\n"
+                "END_REPLACE\n"
+            )
+
+            class FakeResult:
+                passed = False
+                exit_code = 1
+
+            rogue = root / "rogue.log"
+
+            def fake_run_tests(*args, **kwargs):
+                rogue.write_text("temp artifact\n", encoding="utf-8")
+                return FakeResult()
+
+            with mock.patch("ai_coding_agent.workflow.generate_patch", return_value=patch), \
+                 mock.patch("ai_coding_agent.workflow.run_tests", side_effect=fake_run_tests):
+                exit_code = run_workflow(
+                    root=root,
+                    task_path=task_file,
+                    workspace_dir=root / "workspace",
+                    model="qwen2.5-coder:7b",
+                    ollama_host="http://localhost:11434",
+                    dry_run=False,
+                )
+
+            self.assertEqual(exit_code, 1)
+            self.assertFalse(rogue.exists())
             self.assertEqual(
                 target.read_text(encoding="utf-8"),
                 "def greet(name):\n    return f'Hello {name}'\n",

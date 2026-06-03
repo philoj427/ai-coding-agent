@@ -80,3 +80,12 @@ def git_diff(root: Path, *paths: Path) -> str:
     args = ["diff", "--"] + rel_paths if rel_paths else ["diff"]
     result = _git(root, *args)
     return result.stdout
+
+
+def restore_clean_worktree(root: Path) -> None:
+    state = detect_git_state(root)
+    if not state.is_repo:
+        raise GitGuardError("Git repository not found")
+
+    _git(root, "reset", "--hard", "HEAD")
+    _git(root, "clean", "-fd")

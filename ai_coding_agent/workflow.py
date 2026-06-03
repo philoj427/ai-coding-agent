@@ -5,8 +5,8 @@ from pathlib import Path
 
 from .builder import build_prompt, generate_patch
 from .context_builder import build_context_pack
-from .git_guard import GitGuardError, ensure_clean_worktree, git_diff, validate_allowed_changes
-from .patch_applier import PatchParseError, apply_search_replace_patch, restore_text
+from .git_guard import GitGuardError, ensure_clean_worktree, git_diff, restore_clean_worktree, validate_allowed_changes
+from .patch_applier import PatchParseError, apply_search_replace_patch
 from .task import TaskSpec
 from .test_runner import run_tests
 
@@ -25,19 +25,18 @@ def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, o
     patch_path = workspace_dir / "search_replace.patch"
     patch_path.write_text("", encoding="utf-8")
 
-    if not dry_run:
-        patch_text = generate_patch(model=model, prompt=prompt, ollama_host=ollama_host)
-        patch_path.write_text(patch_text, encoding="utf-8")
-
-    target_path = (root / task.target_file).resolve()
-    original_text = target_path.read_text(encoding="utf-8") if target_path.exists() else ""
-
     try:
+        if not dry_run:
+            patch_text = generate_patch(model=model, prompt=prompt, ollama_host=ollama_host)
+            patch_path.write_text(patch_text, encoding="utf-8")
+
+        target_path = (root / task.target_file).resolve()
         if not dry_run:
             apply_search_replace_patch(target_path, patch_text)
         test_result = run_tests(root, task.test_type, task.test_file, workspace_dir)
         if not test_result.passed:
-            restore_text(target_path, original_text)
+            restore_clean_worktree(root)
+            workspace_dir.mkdir(parents=True, exist_ok=True)
             (workspace_dir / "git_diff.txt").write_text("", encoding="utf-8")
             return test_result.exit_code
 
@@ -46,7 +45,11 @@ def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, o
         (workspace_dir / "git_diff.txt").write_text(diff_text, encoding="utf-8")
         return 0
     except (GitGuardError, PatchParseError, RuntimeError, ValueError) as exc:
-        restore_text(target_path, original_text)
+        try:
+            restore_clean_worktree(root)
+        except GitGuardError:
+            pass
+        workspace_dir.mkdir(parents=True, exist_ok=True)
         (workspace_dir / "test_result.txt").write_text(f"{exc}\n", encoding="utf-8")
         (workspace_dir / "git_diff.txt").write_text("", encoding="utf-8")
         return 1
