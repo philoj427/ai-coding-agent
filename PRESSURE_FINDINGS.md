@@ -3,14 +3,14 @@
 Run summary:
 
 - Tasks: 50
-- Passed: 25
-- Failed: 25
+- Passed: 19
+- Failed: 31
 
 ## Main Failure Buckets
 
 1. `SEARCH block must match exactly one location, found 0`
 - The model often proposed a patch whose search text did not exist in the current file state.
-- This remained the dominant failure mode, and the patch-critic layer did not improve the rerun.
+- This remained the dominant failure mode, and the failure mix became more scattered after taxonomy-guided retries.
 
 2. `py_compile` failures
 - A small number of patches produced invalid Python syntax.
@@ -29,7 +29,8 @@ Run summary:
 - The Gatekeeper spacing rule was tightened and no longer false-fires on normal module docstrings.
 - Structured failure reports now make it clear which stage failed and why.
 - The 50-task runner successfully reset the repo between tasks, so failures were isolated.
-- Short anchors, task-focus instructions, the region-selection layer, and the patch-critic layer were not enough on their own in this rerun.
+- Short anchors, task-focus instructions, the region-selection layer, the patch-critic layer, and taxonomy-guided retry were not enough on their own in this rerun.
+- The failure mix shifted: `tests` and `py_compile` showed up more often alongside `SEARCH=0`.
 - The malformed docstring task still failed early when the generated patch format itself was invalid.
 
 ## Likely Fixes to Research Next
