@@ -1,3 +1,9 @@
+"""
+Provides functions for numeric addition with validation.
+
+This module includes a function `add` that takes two numeric inputs and returns their sum. It raises a `TypeError` if either input is not numeric.
+"""
+
 def add(a: int | float, b: int | float) -> int | float:
     """
     Sums two numeric inputs.
