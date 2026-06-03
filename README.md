@@ -4,7 +4,7 @@ Local-first AI coding agent for safe, single-file patching with local Ollama.
 
 ## Workflow
 
-Read `workspace/task.txt`, build a context pack, send it to local Ollama, apply a strict `SEARCH` / `REPLACE` patch, run tests, and record the result under `workspace/`.
+Read `workspace/task.txt`, build a context pack, send it to local Ollama, run the patch through Gatekeeper, apply a strict `SEARCH` / `REPLACE` patch, run tests, and record the result under `workspace/`.
 
 If patching or tests fail, the agent rolls back the target file and restores a clean worktree.
 
