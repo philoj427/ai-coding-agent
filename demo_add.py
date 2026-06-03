@@ -1,7 +1,7 @@
 """
-A simple numeric addition tool with basic input checks.
+A tiny numeric addition helper with input validation.
 
-This module features a function `add` that accepts two numbers, validates them to be numeric, and returns their sum. If either input is non-numeric, it raises a `TypeError`.
+This module provides a function `add` that takes two numbers as inputs, checks if they are numeric, and returns their sum. If either input is non-numeric, it raises a `TypeError`.
 """
 
 def add(a: int | float, b: int | float) -> int | float:
