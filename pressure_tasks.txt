@@ -48,4 +48,3 @@ demo_add.py | pytest | tests/test_demo_add.py | Add a short module comment expla
 demo_add.py | pytest | tests/test_demo_add.py | Add a brief note in the function docstring that the helper is intended for simple numeric inputs, while keeping behavior unchanged.
 demo_add.py | pytest | tests/test_demo_add.py | Tighten the module docstring so it explicitly says only two numeric inputs are supported, while leaving function behavior unchanged.
 demo_add.py | pytest | tests/test_demo_add.py | Refactor add() to assign the validation result to a variable before raising TypeError, while keeping behavior unchanged.
-demo_add.py | pytest | tests/test_demo_add.py | Refactor add() to use a small internal helper and a single return path, while keeping behavior unchanged.
