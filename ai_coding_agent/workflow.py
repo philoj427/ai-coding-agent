@@ -104,6 +104,12 @@ def _generate_and_apply_patch(
         raise last_error
 
 
+def _failure_details_for_patch_error(exc: Exception) -> str | None:
+    if isinstance(exc, GatekeeperError):
+        return getattr(exc, "diff_preview", None) or None
+    return None
+
+
 def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, ollama_host: str, dry_run: bool = False) -> int:
     task = TaskSpec.from_file(task_path)
     workspace_dir.mkdir(parents=True, exist_ok=True)
@@ -158,6 +164,7 @@ def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, o
             workspace_dir,
             stage=_classify_failure(exc),
             reason=str(exc),
+            details=_failure_details_for_patch_error(exc),
         )
         (workspace_dir / "git_diff.txt").write_text("", encoding="utf-8")
         return 1
