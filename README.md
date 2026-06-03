@@ -11,14 +11,9 @@ Local-first AI coding agent prototype based on the V1.35 architecture review.
 
 ## Workflow
 
-1. Read `workspace/task.txt`.
-2. Build `workspace/context_pack.md` from the target file, rules, and optional test file.
-3. Send the context to a local Ollama model.
-4. Receive a strict `SEARCH` / `REPLACE` patch.
-5. Apply the patch to the target file.
-6. Run the selected test command.
-7. Record test output and git diff under `workspace/`.
-8. Roll back the target file if patching or tests fail.
+The agent reads `workspace/task.txt`, builds a context pack, sends it to a local Ollama model, applies a strict `SEARCH` / `REPLACE` patch, runs the selected tests, and records the result under `workspace/`.
+
+If patching or tests fail, it rolls back the target file and restores a clean worktree.
 
 ## Task Format
 
