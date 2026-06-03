@@ -72,14 +72,8 @@ This repository includes:
 
 ## Current Status
 
-The latest validated state is:
+- Latest workflow run: success, with a real diff applied to `demo_add.py`
+- Latest validation: `python -m unittest discover -s tests` passed with 22 tests
+- Safety gates: no-op patch rejection, strict SEARCH/REPLACE matching, Git Guard, rollback, and `py_compile`
 
-- one end-to-end workflow run that produced a real diff in `demo_add.py`
-- no-op patches are rejected before test execution
-- SEARCH/REPLACE parsing preserves indentation and rejects ambiguous matches
-- Git Guard blocks unauthorized staged, untracked, and diff-visible files
-- repo cleanup restores the worktree to `HEAD` on failure
-- Python target files are syntax-checked with `py_compile`
-- the current test suite passes with `unittest`
-
-See [TEST_STATUS.md](TEST_STATUS.md) for the latest run details.
+See [TEST_STATUS.md](TEST_STATUS.md) for the latest run details and failure coverage.
