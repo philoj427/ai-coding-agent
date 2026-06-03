@@ -81,7 +81,7 @@ def _generate_and_apply_patch(
             if attempt > 0:
                 attempt_prompt = (
                     f"{prompt}\n"
-                    "Retry instruction: preserve indentation exactly and output only a valid SEARCH/REPLACE patch.\n"
+                    "Retry instruction: preserve indentation exactly, keep module docstring spacing valid, avoid duplicate top-level defs, and output only a valid SEARCH/REPLACE patch that matches the current file text exactly.\n"
                 )
             patch_text = generate_patch(model=model, prompt=attempt_prompt, ollama_host=ollama_host)
             patch_path.parent.mkdir(parents=True, exist_ok=True)

@@ -24,6 +24,12 @@ class TestCore(unittest.TestCase):
         self.assertIn("Do not change indentation on a line unless the line content also changes.", prompt)
         self.assertTrue(prompt.endswith("\n"))
 
+    def test_retry_instruction_mentions_exact_match(self):
+        retry_instruction = (
+            "Retry instruction: preserve indentation exactly, keep module docstring spacing valid, avoid duplicate top-level defs, and output only a valid SEARCH/REPLACE patch that matches the current file text exactly."
+        )
+        self.assertIn("current file text exactly", retry_instruction)
+
     def test_strip_code_fences(self):
         patch = "```text\nSEARCH\nold\nEND_SEARCH\nREPLACE\nnew\nEND_REPLACE\n```\n"
         self.assertEqual(
@@ -241,6 +247,7 @@ class TestCore(unittest.TestCase):
             task = TaskSpec.from_text("app.py | pytest | tests/test_app.py | Update x")
             context_path = build_context_pack(root, task, root / "workspace")
             self.assertTrue(context_path.exists())
+            self.assertIn("## Target File Anchors", context_path.read_text(encoding="utf-8"))
 
     def test_validate_allowed_changes_blocks_unauthorized_files(self):
         with tempfile.TemporaryDirectory() as tmpdir:

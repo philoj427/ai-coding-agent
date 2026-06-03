@@ -21,6 +21,31 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _build_anchor_snippet(text: str, max_lines: int = 60) -> str:
+    lines = text.splitlines()
+    if not lines:
+        return "<empty file>"
+
+    anchors: list[str] = []
+    seen: set[str] = set()
+
+    def add_block(start: int, end: int) -> None:
+        block = "\n".join(lines[start:end]).rstrip()
+        if block and block not in seen:
+            seen.add(block)
+            anchors.append(block)
+
+    add_block(0, min(len(lines), max_lines))
+
+    for idx, line in enumerate(lines):
+        if line.startswith("def ") or line.startswith('"""'):
+            start = max(0, idx - 2)
+            end = min(len(lines), idx + 12)
+            add_block(start, end)
+
+    return "\n\n---\n\n".join(anchors) if anchors else "<no anchors found>"
+
+
 def build_context_pack(root: Path, task: TaskSpec, workspace_dir: Path) -> Path:
     workspace_dir.mkdir(parents=True, exist_ok=True)
 
@@ -44,6 +69,13 @@ def build_context_pack(root: Path, task: TaskSpec, workspace_dir: Path) -> Path:
         "",
         "```text",
         _read_text(target_path),
+        "```",
+        "",
+        "## Target File Anchors",
+        "These excerpts are included to help the model anchor exact SEARCH text.",
+        "",
+        "```text",
+        _build_anchor_snippet(_read_text(target_path)),
         "```",
     ]
 
