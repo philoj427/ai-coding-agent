@@ -31,10 +31,10 @@ Optional flags:
 
 ## Current Status
 
-- Latest workflow run: success, with a real diff applied to `demo_add.py`
+- Latest workflow run: failed because Gatekeeper rejected a malformed docstring patch
 - Gatekeeper is wired into the workflow before patch application
-- Latest validation: `python -m unittest discover -s tests` passed with 27 tests
-- Safety gates: Gatekeeper, retry once, structured failure reports, no-op patch rejection, duplicate top-level function rejection, line-level indentation rejection, strict SEARCH/REPLACE matching, Git Guard, rollback, and `py_compile`
+- Latest validation: `python -m unittest discover -s tests` passed with 29 tests
+- Safety gates: Gatekeeper, retry once, structured failure reports, no-op patch rejection, duplicate top-level function rejection, module docstring spacing rejection, line-level indentation rejection, strict SEARCH/REPLACE matching, Git Guard, rollback, and `py_compile`
 
 See [TEST_STATUS.md](TEST_STATUS.md) for the latest run details and failure coverage.
 
