@@ -3,14 +3,14 @@
 Run summary:
 
 - Tasks: 50
-- Passed: 29
-- Failed: 21
+- Passed: 20
+- Failed: 30
 
 ## Main Failure Buckets
 
 1. `SEARCH block must match exactly one location, found 0`
 - The model often proposed a patch whose search text did not exist in the current file state.
-- This points to weak task grounding and search-text drift, not just a patch-format problem.
+- This remained the dominant failure mode even after adding target-file anchors.
 
 2. `py_compile` failures
 - A small number of patches produced invalid Python syntax.
@@ -29,12 +29,12 @@ Run summary:
 - The Gatekeeper spacing rule was tightened and no longer false-fires on normal module docstrings.
 - Structured failure reports now make it clear which stage failed and why.
 - The 50-task runner successfully reset the repo between tasks, so failures were isolated.
+- The latest report made it obvious that context anchors alone did not improve search-text alignment.
 
 ## Likely Fixes to Research Next
 
-- Add exact current-file snippets to the context pack so the model anchors search text better.
+- Rework context snippets so they highlight only the exact lines around the intended edit, not broad file anchors.
 - Make docstring-only tasks and code-refactor tasks use slightly different prompts.
 - Add a syntax-oriented retry instruction when the first attempt hits `py_compile`.
 - Consider an AST-based preflight for helper-extraction tasks before letting tests run.
 - Add a stronger reminder in the prompt that replacements must preserve all existing behavior unless the task says otherwise.
-
