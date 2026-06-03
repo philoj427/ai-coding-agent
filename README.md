@@ -32,8 +32,8 @@ Optional flags:
 ## Current Status
 
 - Latest workflow run: success, with a real diff applied to `demo_add.py`
-- Latest validation: `python -m unittest discover -s tests` passed with 24 tests
-- Safety gates: no-op patch rejection, line-level indentation rejection, strict SEARCH/REPLACE matching, Git Guard, rollback, and `py_compile`
+- Latest validation: `python -m unittest discover -s tests` passed with 26 tests
+- Safety gates: Gatekeeper, retry once, no-op patch rejection, line-level indentation rejection, strict SEARCH/REPLACE matching, Git Guard, rollback, and `py_compile`
 
 See [TEST_STATUS.md](TEST_STATUS.md) for the latest run details and failure coverage.
 
