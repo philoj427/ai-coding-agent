@@ -37,6 +37,11 @@ Optional flags:
 
 See [TEST_STATUS.md](TEST_STATUS.md) for the latest run details and failure coverage.
 
+## Roadmap
+
+- [V1.4.md](V1.4.md)
+- [TODO.md](TODO.md)
+
 ## Task Format
 
 `target_file | test_type | test_file | task_description`
