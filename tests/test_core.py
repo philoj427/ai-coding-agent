@@ -212,14 +212,14 @@ class TestCore(unittest.TestCase):
             root = Path(tmpdir)
             target = root / "app.py"
             target.write_text(
-                '"""Module docs."""\n\n'
+                '"""Module docs."""\n'
                 "def add(a, b):\n"
                 "    return a + b\n",
                 encoding="utf-8",
             )
             patch = (
                 "SEARCH\n"
-                '"""Module docs."""\n\n'
+                '"""Module docs."""\n'
                 "def add(a, b):\n"
                 "    return a + b\n"
                 "END_SEARCH\n"
