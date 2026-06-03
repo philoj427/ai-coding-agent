@@ -31,8 +31,8 @@ Optional flags:
 
 ## Current Status
 
-- Latest workflow run: failed because the generated patch was a no-op
-- Latest validation: `python -m unittest discover -s tests` passed with 23 tests
+- Latest workflow run: success, with a real diff applied to `demo_add.py`
+- Latest validation: `python -m unittest discover -s tests` passed with 24 tests
 - Safety gates: no-op patch rejection, line-level indentation rejection, strict SEARCH/REPLACE matching, Git Guard, rollback, and `py_compile`
 
 See [TEST_STATUS.md](TEST_STATUS.md) for the latest run details and failure coverage.
