@@ -6,6 +6,7 @@ from unittest import mock
 from ai_coding_agent.context_builder import build_context_pack
 from ai_coding_agent.builder import build_prompt
 from ai_coding_agent.builder import _strip_code_fences
+from ai_coding_agent.gatekeeper import GatekeeperError, inspect_patch
 from ai_coding_agent.git_guard import GitGuardError, ensure_clean_worktree, validate_allowed_changes
 from ai_coding_agent.patch_applier import PatchParseError
 from ai_coding_agent.patch_applier import apply_search_replace_patch
@@ -165,6 +166,22 @@ class TestCore(unittest.TestCase):
             )
             with self.assertRaises(PatchParseError):
                 apply_search_replace_patch(target, patch)
+
+    def test_gatekeeper_rejects_no_op_patch(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text("value = 1\n", encoding="utf-8")
+            patch = (
+                "SEARCH\n"
+                "value = 1\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "value = 1\n"
+                "END_REPLACE\n"
+            )
+            with self.assertRaises(GatekeeperError):
+                inspect_patch(target, patch)
 
     def test_context_builder(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -439,6 +456,65 @@ class TestCore(unittest.TestCase):
             self._git(root, "commit", "-m", "baseline")
 
             bad_patch = "SEARCH\nmissing\nEND_SEARCH\nREPLACE\nx\nEND_REPLACE\n"
+            good_patch = (
+                "SEARCH\n"
+                "    return f'Hello {name}'\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "    return f'Hello {name}!'\n"
+                "END_REPLACE\n"
+            )
+
+            class FakeResult:
+                passed = True
+                exit_code = 0
+
+            with mock.patch("ai_coding_agent.workflow.generate_patch", side_effect=[bad_patch, good_patch]) as mock_generate, \
+                 mock.patch("ai_coding_agent.workflow.run_tests", return_value=FakeResult()):
+                exit_code = run_workflow(
+                    root=root,
+                    task_path=task_file,
+                    workspace_dir=root / "workspace",
+                    model="qwen2.5-coder:7b",
+                    ollama_host="http://localhost:11434",
+                    dry_run=False,
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(mock_generate.call_count, 2)
+            self.assertIn("!", target.read_text(encoding="utf-8"))
+            self.assertFalse(any(root.rglob("__pycache__")))
+
+    def test_run_workflow_retries_once_on_gatekeeper_failure(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._init_git_repo(root)
+            (root / ".gitignore").write_text("workspace/\n", encoding="utf-8")
+
+            target = root / "demo.py"
+            target.write_text(
+                "def greet(name):\n"
+                "    return f'Hello {name}'\n",
+                encoding="utf-8",
+            )
+            task_file = root / "task.txt"
+            task_file.write_text(
+                "demo.py | pytest | tests/test_demo.py | Make greet add punctuation.\n",
+                encoding="utf-8",
+            )
+            (root / "tests").mkdir()
+            (root / "tests" / "test_demo.py").write_text("import unittest\n", encoding="utf-8")
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-m", "baseline")
+
+            bad_patch = (
+                "SEARCH\n"
+                "    return f'Hello {name}'\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "    return f'Hello {name}'\n"
+                "END_REPLACE\n"
+            )
             good_patch = (
                 "SEARCH\n"
                 "    return f'Hello {name}'\n"

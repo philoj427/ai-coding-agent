@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .builder import build_prompt, generate_patch
 from .context_builder import build_context_pack
+from .gatekeeper import GatekeeperError, inspect_patch
 from .git_guard import GitGuardError, ensure_clean_worktree, git_diff, restore_clean_worktree, validate_allowed_changes
 from .patch_applier import PatchParseError, apply_search_replace_patch
 from .task import TaskSpec
@@ -61,11 +62,12 @@ def _generate_and_apply_patch(
             patch_text = generate_patch(model=model, prompt=attempt_prompt, ollama_host=ollama_host)
             patch_path.parent.mkdir(parents=True, exist_ok=True)
             patch_path.write_text(patch_text, encoding="utf-8")
+            inspect_patch(target_path, patch_text)
             apply_search_replace_patch(target_path, patch_text)
             _py_compile_target(target_path)
             _cleanup_pycache(target_path)
             return
-        except (PatchParseError, subprocess.CalledProcessError) as exc:
+        except (GatekeeperError, PatchParseError, subprocess.CalledProcessError, RuntimeError) as exc:
             last_error = exc
             restore_clean_worktree(root)
             patch_path.parent.mkdir(parents=True, exist_ok=True)
@@ -114,7 +116,7 @@ def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, o
         diff_text = git_diff(root, target_path)
         (workspace_dir / "git_diff.txt").write_text(diff_text, encoding="utf-8")
         return 0
-    except (GitGuardError, PatchParseError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
+    except (GitGuardError, GatekeeperError, PatchParseError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
         try:
             restore_clean_worktree(root)
         except GitGuardError:
