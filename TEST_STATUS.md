@@ -6,7 +6,7 @@ Last updated: 2026-06-03
 
 - Latest workflow run completed successfully.
 - The run produced a real diff in `demo_add.py`.
-- The current test suite passes with 22 tests.
+- The current test suite passes with 23 tests.
 
 ## Workflow Result
 
@@ -20,7 +20,7 @@ Last updated: 2026-06-03
 - Command: `python -m unittest discover -s tests`
 - Result: success
 - Runner: `unittest` fallback
-- Outcome: 22 tests passed
+- Outcome: 23 tests passed
 
 ## Safety Coverage
 
@@ -29,6 +29,7 @@ The core suite covers:
 - SEARCH blocks that match multiple locations
 - SEARCH blocks that do not exist in the target file
 - No-op patch rejection
+- Line-level indentation-only rejection
 - Git Guard blocking unauthorized staged files
 - Git Guard blocking unauthorized untracked files
 - Workflow rollback when tests fail

@@ -19,6 +19,7 @@ class TestCore(unittest.TestCase):
         self.assertIn("Output only one SEARCH/REPLACE patch.", prompt)
         self.assertIn("Preserve exact indentation and whitespace.", prompt)
         self.assertIn("Patch must change the target file contents.", prompt)
+        self.assertIn("Do not change indentation on a line unless the line content also changes.", prompt)
         self.assertTrue(prompt.endswith("\n"))
 
     def test_task_parse(self):
@@ -113,6 +114,28 @@ class TestCore(unittest.TestCase):
                 "    return a + b\n"
                 "END_SEARCH\n"
                 "REPLACE\n"
+                "        return a + b\n"
+                "END_REPLACE\n"
+            )
+            with self.assertRaises(PatchParseError):
+                apply_search_replace_patch(target, patch)
+
+    def test_patch_apply_rejects_line_level_indentation_only_changes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text(
+                "def add(a, b):\n"
+                "    return a + b\n",
+                encoding="utf-8",
+            )
+            patch = (
+                "SEARCH\n"
+                "def add(a, b):\n"
+                "    return a + b\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "def add(a, b):\n"
                 "        return a + b\n"
                 "END_REPLACE\n"
             )

@@ -22,6 +22,14 @@ def apply_search_replace_patch(target_file: Path, patch_text: str) -> PatchResul
     for search_text, replace_text in parse_search_replace_patch(patch_text):
         if search_text != replace_text and search_text.strip() == replace_text.strip():
             raise PatchParseError("SEARCH/REPLACE cannot be indentation-only changes")
+        search_lines = search_text.splitlines()
+        replace_lines = replace_text.splitlines()
+        if len(search_lines) == len(replace_lines):
+            for search_line, replace_line in zip(search_lines, replace_lines):
+                if search_line != replace_line and search_line.lstrip() == replace_line.lstrip():
+                    raise PatchParseError(
+                        "SEARCH/REPLACE cannot change indentation without changing line content"
+                    )
         occurrences = updated_text.count(search_text)
         if occurrences != 1:
             raise PatchParseError(

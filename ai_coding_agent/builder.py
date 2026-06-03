@@ -12,6 +12,7 @@ Preserve exact indentation and whitespace.
 Do not output indentation-only changes.
 Patch must change the target file contents.
 Do not output a no-op patch.
+Do not change indentation on a line unless the line content also changes.
 Target one file only.
 Use this exact format:
 SEARCH
