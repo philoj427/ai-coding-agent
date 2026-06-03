@@ -1,29 +1,12 @@
 # AI Coding Agent
 
-Local-first AI coding agent prototype for safe, single-file patching with local Ollama.
-
-## Goals
-
-- Small, patch-based changes.
-- Python-enforced safety checks.
-- Test before review.
-- Local-first and easy to inspect.
+Local-first AI coding agent for safe, single-file patching with local Ollama.
 
 ## Workflow
 
 Read `workspace/task.txt`, build a context pack, send it to local Ollama, apply a strict `SEARCH` / `REPLACE` patch, run tests, and record the result under `workspace/`.
 
 If patching or tests fail, the agent rolls back the target file and restores a clean worktree.
-
-## Task Format
-
-`target_file | test_type | test_file | task_description`
-
-Supported `test_type` values:
-
-- `pytest`
-- `npm test`
-- `none`
 
 ## Usage
 
@@ -54,9 +37,8 @@ Optional flags:
 
 See [TEST_STATUS.md](TEST_STATUS.md) for the latest run details and failure coverage.
 
-## Output Files
+## Task Format
 
-- `workspace/context_pack.md`
-- `workspace/search_replace.patch`
-- `workspace/test_result.txt`
-- `workspace/git_diff.txt`
+`target_file | test_type | test_file | task_description`
+
+Supported `test_type` values: `pytest`, `npm test`, `none`
