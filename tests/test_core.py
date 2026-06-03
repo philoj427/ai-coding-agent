@@ -102,6 +102,22 @@ class TestCore(unittest.TestCase):
             with self.assertRaises(PatchParseError):
                 apply_search_replace_patch(target, patch)
 
+    def test_patch_apply_rejects_indentation_only_changes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+            patch = (
+                "SEARCH\n"
+                "    return a + b\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "        return a + b\n"
+                "END_REPLACE\n"
+            )
+            with self.assertRaises(PatchParseError):
+                apply_search_replace_patch(target, patch)
+
     def test_context_builder(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

@@ -9,6 +9,7 @@ SYSTEM_PROMPT = """Output only one SEARCH/REPLACE patch.
 No markdown fences.
 No explanations.
 Preserve exact indentation and whitespace.
+Do not output indentation-only changes.
 Target one file only.
 Use this exact format:
 SEARCH

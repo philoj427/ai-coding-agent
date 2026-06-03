@@ -20,6 +20,8 @@ def apply_search_replace_patch(target_file: Path, patch_text: str) -> PatchResul
     updated_text = original_text
 
     for search_text, replace_text in parse_search_replace_patch(patch_text):
+        if search_text != replace_text and search_text.strip() == replace_text.strip():
+            raise PatchParseError("SEARCH/REPLACE cannot be indentation-only changes")
         occurrences = updated_text.count(search_text)
         if occurrences != 1:
             raise PatchParseError(
