@@ -1,21 +1,26 @@
 # AI Coding Agent
 
-Local-first AI coding agent skeleton based on the V1.35 architecture review.
+Local-first AI coding agent prototype based on the V1.35 architecture review.
 
-## What it does
+## Goals
 
-- Reads a `task.txt` file.
-- Builds a focused `workspace/context_pack.md`.
-- Sends the context to a local Ollama model.
-- Expects a strict `SEARCH` / `REPLACE` patch.
-- Applies the patch to one target file.
-- Runs tests.
-- Writes `workspace/test_result.txt` and `workspace/git_diff.txt`.
-- Rolls back if tests fail.
+- Keep code changes small and patch-based.
+- Use Python to enforce safety rules.
+- Validate changes with tests before review.
+- Keep the workflow local-first and easy to inspect.
 
-## Task format
+## Workflow
 
-`task.txt` must contain one line:
+1. Read `workspace/task.txt`.
+2. Build `workspace/context_pack.md` from the target file, rules, and optional test file.
+3. Send the context to a local Ollama model.
+4. Receive a strict `SEARCH` / `REPLACE` patch.
+5. Apply the patch to the target file.
+6. Run the selected test command.
+7. Record test output and git diff under `workspace/`.
+8. Roll back the target file if patching or tests fail.
+
+## Task Format
 
 `target_file | test_type | test_file | task_description`
 
@@ -23,27 +28,45 @@ Example:
 
 `app.py | pytest | tests/test_app.py | Implement divide(a, b) with divide-by-zero protection`
 
+Supported `test_type` values:
+
+- `pytest`
+- `npm test`
+- `none`
+
 ## Usage
 
 ```powershell
-python .\agent.py --root . --task task.txt --model qwen2.5-coder:7b
+python .\agent.py --root . --task workspace\task.txt --model qwen2.5-coder:7b
 ```
 
-Optional:
+Optional flags:
 
 - `--workspace workspace`
 - `--ollama-host http://localhost:11434`
 - `--dry-run`
 
-## Files written
+## Output Files
 
 - `workspace/context_pack.md`
 - `workspace/search_replace.patch`
 - `workspace/test_result.txt`
 - `workspace/git_diff.txt`
 
-## Notes
+## Safety Rules
 
-- The tool expects to run inside a git repository for Git Guard and diff validation.
+- The repository must be clean before execution.
 - `workspace/` is ignored by git.
-- This is a V1.35 prototype, so it only supports single-file editing.
+- Only one target file is supported in V1.35.
+- SEARCH blocks must match exactly one location.
+- Failed tests trigger rollback of the target file.
+- No automatic commit is performed.
+
+## Repository Status
+
+This repository includes:
+
+- the agent prototype implementation
+- a demo task and demo tests
+- the three original architecture documents
+
