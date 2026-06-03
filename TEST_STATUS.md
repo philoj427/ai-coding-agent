@@ -6,6 +6,7 @@ Last updated: 2026-06-03
 
 - Latest workflow run completed successfully.
 - The run produced a real diff in `demo_add.py`.
+- Gatekeeper is wired into the workflow before patch application.
 - The current test suite passes with 26 tests.
 
 ## Workflow Result
