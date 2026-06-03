@@ -59,4 +59,13 @@ def inspect_patch(target_file: Path, patch_text: str) -> GatekeeperResult:
     if not diff_text.strip():
         raise GatekeeperError("SEARCH/REPLACE patch must change target file")
 
+    if target_file.suffix == ".py":
+        top_level_defs: set[str] = set()
+        for line in updated_text.splitlines():
+            if line.startswith("def "):
+                name = line[4:].split("(", 1)[0].strip()
+                if name in top_level_defs:
+                    raise GatekeeperError(f"Duplicate top-level function definition: {name}")
+                top_level_defs.add(name)
+
     return GatekeeperResult(True, "ok", diff_text)

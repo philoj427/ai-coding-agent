@@ -183,6 +183,30 @@ class TestCore(unittest.TestCase):
             with self.assertRaises(GatekeeperError):
                 inspect_patch(target, patch)
 
+    def test_gatekeeper_rejects_duplicate_top_level_function_names(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text(
+                "def add(a, b):\n"
+                "    return a + b\n",
+                encoding="utf-8",
+            )
+            patch = (
+                "SEARCH\n"
+                "def add(a, b):\n"
+                "    return a + b\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "def add(a, b):\n"
+                "    return a + b\n\n"
+                "def add(a, b):\n"
+                "    return a + b\n"
+                "END_REPLACE\n"
+            )
+            with self.assertRaises(GatekeeperError):
+                inspect_patch(target, patch)
+
     def test_context_builder(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

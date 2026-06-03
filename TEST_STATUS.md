@@ -7,7 +7,7 @@ Last updated: 2026-06-03
 - Latest workflow run completed successfully.
 - The run produced a real diff in `demo_add.py`.
 - Gatekeeper is wired into the workflow before patch application.
-- The current test suite passes with 26 tests.
+- The current test suite passes with 27 tests.
 
 ## Workflow Result
 
@@ -21,7 +21,7 @@ Last updated: 2026-06-03
 - Command: `python -m unittest discover -s tests`
 - Result: success
 - Runner: `unittest` fallback
-- Outcome: 26 tests passed
+- Outcome: 27 tests passed
 
 ## Safety Coverage
 
@@ -34,6 +34,7 @@ The core suite covers:
 - Gatekeeper pre-application rejection
 - Retry once after malformed patch output
 - Structured failure reports with stage and reason
+- Duplicate top-level function rejection
 - Git Guard blocking unauthorized staged files
 - Git Guard blocking unauthorized untracked files
 - Workflow rollback when tests fail
