@@ -14,10 +14,12 @@
 
 ## Next Phase
 
-- [ ] Run the 50-task pressure test suite
-- [ ] Collect failure patterns from all 50 runs
-- [ ] Summarize the problems before changing code
-- [ ] Revisit the Gatekeeper rules only after evidence is collected
+- [x] Run the 50-task pressure test suite
+- [x] Collect failure patterns from all 50 runs
+- [x] Summarize the problems before changing code
+- [ ] Improve task grounding for search-text mismatches
+- [ ] Add syntax-focused retry guidance for `py_compile` failures
+- [ ] Revisit Gatekeeper rules only after evidence is collected
 
 ## Non-Goals
 
