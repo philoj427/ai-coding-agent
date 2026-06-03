@@ -10,6 +10,8 @@ No markdown fences.
 No explanations.
 Preserve exact indentation and whitespace.
 Do not output indentation-only changes.
+Patch must change the target file contents.
+Do not output a no-op patch.
 Target one file only.
 Use this exact format:
 SEARCH

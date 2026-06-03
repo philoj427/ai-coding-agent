@@ -18,6 +18,7 @@ class TestCore(unittest.TestCase):
         prompt = build_prompt("context")
         self.assertIn("Output only one SEARCH/REPLACE patch.", prompt)
         self.assertIn("Preserve exact indentation and whitespace.", prompt)
+        self.assertIn("Patch must change the target file contents.", prompt)
         self.assertTrue(prompt.endswith("\n"))
 
     def test_task_parse(self):
@@ -113,6 +114,22 @@ class TestCore(unittest.TestCase):
                 "END_SEARCH\n"
                 "REPLACE\n"
                 "        return a + b\n"
+                "END_REPLACE\n"
+            )
+            with self.assertRaises(PatchParseError):
+                apply_search_replace_patch(target, patch)
+
+    def test_patch_apply_rejects_no_op_patch(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text("value = 1\n", encoding="utf-8")
+            patch = (
+                "SEARCH\n"
+                "value = 1\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "value = 1\n"
                 "END_REPLACE\n"
             )
             with self.assertRaises(PatchParseError):
@@ -246,6 +263,63 @@ class TestCore(unittest.TestCase):
             self.assertEqual(
                 (root / "workspace" / "git_diff.txt").read_text(encoding="utf-8"),
                 "",
+            )
+
+    def test_run_workflow_rejects_no_op_patch(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._init_git_repo(root)
+            (root / ".gitignore").write_text("workspace/\n", encoding="utf-8")
+
+            target = root / "demo.py"
+            target.write_text(
+                "def greet(name):\n"
+                "    return f'Hello {name}'\n",
+                encoding="utf-8",
+            )
+            task_file = root / "task.txt"
+            task_file.write_text(
+                "demo.py | pytest | tests/test_demo.py | Keep greet unchanged.\n",
+                encoding="utf-8",
+            )
+            (root / "tests").mkdir()
+            (root / "tests" / "test_demo.py").write_text("import unittest\n", encoding="utf-8")
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-m", "baseline")
+
+            patch = (
+                "SEARCH\n"
+                "    return f'Hello {name}'\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "    return f'Hello {name}'\n"
+                "END_REPLACE\n"
+            )
+
+            class FakeResult:
+                passed = True
+                exit_code = 0
+
+            with mock.patch("ai_coding_agent.workflow.generate_patch", return_value=patch), \
+                 mock.patch("ai_coding_agent.workflow.run_tests", return_value=FakeResult()) as run_tests:
+                exit_code = run_workflow(
+                    root=root,
+                    task_path=task_file,
+                    workspace_dir=root / "workspace",
+                    model="qwen2.5-coder:7b",
+                    ollama_host="http://localhost:11434",
+                    dry_run=False,
+                )
+
+            self.assertEqual(exit_code, 1)
+            run_tests.assert_not_called()
+            self.assertEqual(
+                target.read_text(encoding="utf-8"),
+                "def greet(name):\n    return f'Hello {name}'\n",
+            )
+            self.assertIn(
+                "SEARCH/REPLACE patch must change target file",
+                (root / "workspace" / "test_result.txt").read_text(encoding="utf-8"),
             )
 
     def test_run_workflow_cleans_untracked_file_on_test_failure(self):

@@ -40,6 +40,8 @@ def apply_search_replace_patch(target_file: Path, patch_text: str) -> PatchResul
             tofile=str(target_file),
         )
     )
+    if not diff_text.strip():
+        raise PatchParseError("SEARCH/REPLACE patch must change target file")
     return PatchResult(True, original_text, updated_text, diff_text)
 
 
