@@ -13,7 +13,7 @@ Last updated: 2026-06-03
 - Command: `python -m unittest discover -s tests`
 - Result: completed successfully
 - Test runner: `unittest` fallback
-- Outcome: 16 tests passed
+- Outcome: 19 tests passed
 
 ## Latest Functional Change
 
@@ -33,9 +33,14 @@ The core test suite now covers:
 - Git Guard blocking unauthorized untracked files
 - Workflow rollback when tests fail
 - Workflow repo cleanup after test failure
+- Builder prompt hardening
+- Patch parse retry once
+- Python syntax validation with `py_compile`
+- Cleanup of `__pycache__` artifacts
 
 ## Notes
 
 - `workspace/` is ignored by git, so runtime artifacts stay local.
 - The repository now has both success-path coverage and failure-path coverage.
 - Failure cleanup now restores the repo to `HEAD` and removes stray untracked files.
+- Python target files are syntax-checked and any generated `__pycache__` artifacts are removed.

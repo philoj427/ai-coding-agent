@@ -5,23 +5,23 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 
-SYSTEM_PROMPT = """You are Builder Agent for a local-first AI Coding Agent.
-Output only a SEARCH/REPLACE patch.
-Do not use markdown fences.
-Do not explain anything.
-The patch must target one file and use exact text matches.
-Format:
+SYSTEM_PROMPT = """Output only one SEARCH/REPLACE patch.
+No markdown fences.
+No explanations.
+Preserve exact indentation and whitespace.
+Target one file only.
+Use this exact format:
 SEARCH
 <exact old text>
 END_SEARCH
 REPLACE
-<new text>
+<replacement text>
 END_REPLACE
 """
 
 
 def build_prompt(context_pack: str) -> str:
-    return f"{SYSTEM_PROMPT}\n\n{context_pack}"
+    return f"{SYSTEM_PROMPT}\n\n{context_pack}\n"
 
 
 def generate_patch(model: str, prompt: str, ollama_host: str = "http://localhost:11434") -> str:
