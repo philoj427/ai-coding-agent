@@ -5,22 +5,14 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 
-SYSTEM_PROMPT = """Output only one SEARCH/REPLACE patch.
+SYSTEM_PROMPT = """Choose exactly one candidate from the local candidate list.
+Return JSON only.
 No markdown fences.
 No explanations.
-Preserve exact indentation and whitespace.
-Do not output indentation-only changes.
-Patch must change the target file contents.
-Do not output a no-op patch.
-Do not change indentation on a line unless the line content also changes.
-Target one file only.
-Use this exact format:
-SEARCH
-<exact old text>
-END_SEARCH
-REPLACE
-<replacement text>
-END_REPLACE
+Do not invent SEARCH text.
+Do not paraphrase candidate excerpts.
+Use this exact JSON shape:
+{"candidate_id":"<id>","replacement":"<new text>","reason":"<short reason>"}
 """
 
 

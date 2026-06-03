@@ -3,8 +3,8 @@
 ## Latest Run
 
 - Tasks: 50
-- Passed: 21
-- Failed: 29
+- Passed: 27
+- Failed: 23
 
 ## What Changed
 
@@ -21,13 +21,12 @@
 
 ## Read
 
-- The local candidate layer helps, but it did not move the pressure result up yet.
-- `SEARCH=0` is still the dominant failure mode.
-- The remaining failures are more spread across syntax and semantic issues.
+- The local candidate layer improves control, but it did not yet eliminate `SEARCH=0`.
+- The remaining failures are still split across syntax and semantic issues.
+- A deterministic local candidate scorer is the next thing to try.
 
 ## Next Direction
 
 - Tighten local candidate ranking.
-- Add a deterministic local candidate scorer.
 - Keep Ollama on ranking and replacement wording only.
 - Avoid pushing SEARCH generation back to the model.

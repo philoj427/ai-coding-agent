@@ -7,10 +7,13 @@ import sys
 from pathlib import Path
 
 from .builder import build_prompt, generate_patch
+from .candidate_selector import CandidateSelection, parse_candidate_selection
 from .context_builder import build_context_pack
 from .gatekeeper import GatekeeperError, inspect_patch
 from .git_guard import GitGuardError, ensure_clean_worktree, git_diff, restore_clean_worktree, validate_allowed_changes
 from .patch_applier import PatchParseError, apply_search_replace_patch
+from .patch_parser import parse_search_replace_patch
+from .search_candidates import SearchCandidate, build_search_candidates
 from .task import TaskSpec
 from .test_runner import run_tests
 
@@ -58,6 +61,44 @@ def _cleanup_pycache(target_path: Path) -> None:
         pass
 
 
+def _compose_patch(candidate: SearchCandidate, replacement: str) -> str:
+    return (
+        "SEARCH\n"
+        f"{candidate.text}\n"
+        "END_SEARCH\n"
+        "REPLACE\n"
+        f"{replacement}\n"
+        "END_REPLACE\n"
+    )
+
+
+def _select_candidate(
+    *,
+    model: str,
+    prompt: str,
+    ollama_host: str,
+    candidates: list[SearchCandidate],
+) -> CandidateSelection:
+    if not candidates:
+        raise RuntimeError("No local search candidates available")
+    selection_response = generate_patch(model=model, prompt=prompt, ollama_host=ollama_host)
+    try:
+        selection = parse_candidate_selection(selection_response)
+    except Exception:
+        parsed_pairs = parse_search_replace_patch(selection_response)
+        if len(parsed_pairs) != 1:
+            raise
+        search_text, replacement_text = parsed_pairs[0]
+        for candidate in candidates:
+            if candidate.text == search_text:
+                return CandidateSelection(candidate_id=candidate.candidate_id, replacement=replacement_text, reason="legacy patch response")
+        raise RuntimeError("Legacy patch response did not match any local search candidate")
+    candidate_ids = {candidate.candidate_id for candidate in candidates}
+    if selection.candidate_id not in candidate_ids:
+        raise RuntimeError(f"Selected candidate_id {selection.candidate_id!r} is not in the local candidate list")
+    return selection
+
+
 def _generate_and_apply_patch(
     *,
     root: Path,
@@ -81,9 +122,17 @@ def _generate_and_apply_patch(
             if attempt > 0:
                 attempt_prompt = (
                     f"{prompt}\n"
-                    "Retry instruction: preserve indentation exactly, keep module docstring spacing valid, avoid duplicate top-level defs, and output only a valid SEARCH/REPLACE patch that matches the current file text exactly.\n"
+                    "Retry instruction: choose one of the local candidate ids only, do not invent SEARCH text, keep the replacement minimal, preserve indentation exactly, and return valid JSON only.\n"
                 )
-            patch_text = generate_patch(model=model, prompt=attempt_prompt, ollama_host=ollama_host)
+            candidates = build_search_candidates(target_path)
+            selection = _select_candidate(
+                model=model,
+                prompt=attempt_prompt,
+                ollama_host=ollama_host,
+                candidates=candidates,
+            )
+            candidate_map = {candidate.candidate_id: candidate for candidate in candidates}
+            patch_text = _compose_patch(candidate_map[selection.candidate_id], selection.replacement)
             patch_path.parent.mkdir(parents=True, exist_ok=True)
             patch_path.write_text(patch_text, encoding="utf-8")
             inspect_patch(target_path, patch_text)
@@ -91,7 +140,7 @@ def _generate_and_apply_patch(
             _py_compile_target(target_path)
             _cleanup_pycache(target_path)
             return
-        except (GatekeeperError, PatchParseError, subprocess.CalledProcessError, RuntimeError) as exc:
+        except (GatekeeperError, PatchParseError, subprocess.CalledProcessError, RuntimeError, ValueError) as exc:
             last_error = exc
             restore_clean_worktree(root)
             patch_path.parent.mkdir(parents=True, exist_ok=True)

@@ -6,6 +6,8 @@ from unittest import mock
 from ai_coding_agent.context_builder import build_context_pack
 from ai_coding_agent.builder import build_prompt
 from ai_coding_agent.builder import _strip_code_fences
+from ai_coding_agent.candidate_selector import parse_candidate_selection
+from ai_coding_agent.search_candidates import build_search_candidates
 from ai_coding_agent.gatekeeper import GatekeeperError, inspect_patch
 from ai_coding_agent.git_guard import GitGuardError, ensure_clean_worktree, validate_allowed_changes
 from ai_coding_agent.patch_applier import PatchParseError
@@ -18,10 +20,9 @@ from ai_coding_agent.workflow import run_workflow
 class TestCore(unittest.TestCase):
     def test_build_prompt_is_strict_and_compact(self):
         prompt = build_prompt("context")
-        self.assertIn("Output only one SEARCH/REPLACE patch.", prompt)
-        self.assertIn("Preserve exact indentation and whitespace.", prompt)
-        self.assertIn("Patch must change the target file contents.", prompt)
-        self.assertIn("Do not change indentation on a line unless the line content also changes.", prompt)
+        self.assertIn("Choose exactly one candidate from the local candidate list.", prompt)
+        self.assertIn("Return JSON only.", prompt)
+        self.assertIn('"candidate_id":"<id>"', prompt)
         self.assertTrue(prompt.endswith("\n"))
 
     def test_retry_instruction_mentions_exact_match(self):
@@ -241,13 +242,44 @@ class TestCore(unittest.TestCase):
     def test_context_builder(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            (root / "app.py").write_text("x = 1\n", encoding="utf-8")
+            (root / "app.py").write_text(
+                '"""Module docs."""\n'
+                "\n"
+                "def add(a, b):\n"
+                "    return a + b\n",
+                encoding="utf-8",
+            )
             (root / "tests").mkdir()
             (root / "tests" / "test_app.py").write_text("assert True\n", encoding="utf-8")
             task = TaskSpec.from_text("app.py | pytest | tests/test_app.py | Update x")
             context_path = build_context_pack(root, task, root / "workspace")
             self.assertTrue(context_path.exists())
-            self.assertIn("## Target File Anchors", context_path.read_text(encoding="utf-8"))
+            context_text = context_path.read_text(encoding="utf-8")
+            self.assertIn("## Exact Search Candidates", context_text)
+            self.assertIn("Candidate docstring", context_text)
+            self.assertIn("Candidate function_1", context_text)
+
+    def test_search_candidate_generation_returns_exact_substrings(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text(
+                '"""Module docs."""\n'
+                "\n"
+                "def add(a, b):\n"
+                "    return a + b\n",
+                encoding="utf-8",
+            )
+            candidates = build_search_candidates(target)
+            self.assertTrue(any(candidate.text == '"""Module docs."""' for candidate in candidates))
+            self.assertTrue(any(candidate.text.startswith("def add(a, b):") for candidate in candidates))
+
+    def test_parse_candidate_selection(self):
+        selection = parse_candidate_selection(
+            '{"candidate_id":"function_1","replacement":"return a + b!","reason":"punctuation"}'
+        )
+        self.assertEqual(selection.candidate_id, "function_1")
+        self.assertEqual(selection.replacement, "return a + b!")
 
     def test_validate_allowed_changes_blocks_unauthorized_files(self):
         with tempfile.TemporaryDirectory() as tmpdir:

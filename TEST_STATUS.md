@@ -2,7 +2,7 @@
 
 ## Summary
 
-- Latest workflow attempt completed with a real patching path using local exact SEARCH candidates.
+- Latest workflow attempt completed with local exact SEARCH candidates.
 - The agent no longer asks Ollama to invent SEARCH text.
 - Latest unit test suite result: 32 tests passed.
 
@@ -11,7 +11,7 @@
 - Result: failed
 - Run: `python .\run_pressure_tests.py`
 - Tasks: 50
-- Outcome: 21 passed, 29 failed
+- Outcome: 27 passed, 23 failed
 
 ## Latest Failure Pattern
 
@@ -31,5 +31,5 @@
 
 ## Notes
 
-- The new local candidate layer is the current architectural change under evaluation.
-- It reduced reliance on model-generated SEARCH text, but it has not yet improved pressure pass rate.
+- The local candidate layer is the current architectural change under evaluation.
+- It reduced reliance on model-generated SEARCH text, but it has not yet eliminated `SEARCH=0`.

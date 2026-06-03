@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .candidate_selector import build_candidate_context
+from .search_candidates import build_search_candidates
 from .task import TaskSpec
 
 
@@ -51,6 +53,7 @@ def build_context_pack(root: Path, task: TaskSpec, workspace_dir: Path) -> Path:
 
     target_path = root / task.target_file
     rules_path = root / "CODING_RULES.md"
+    candidates = build_search_candidates(target_path)
 
     sections = [
         "# Context Pack",
@@ -71,12 +74,10 @@ def build_context_pack(root: Path, task: TaskSpec, workspace_dir: Path) -> Path:
         _read_text(target_path),
         "```",
         "",
-        "## Target File Anchors",
-        "These excerpts are included to help the model anchor exact SEARCH text.",
+        "## Exact Search Candidates",
+        "The model must select one of these exact candidate excerpts. Do not invent SEARCH text.",
         "",
-        "```text",
-        _build_anchor_snippet(_read_text(target_path)),
-        "```",
+        build_candidate_context(candidates) if candidates else "<no candidates found>",
     ]
 
     if task.test_file is not None:
@@ -93,14 +94,9 @@ def build_context_pack(root: Path, task: TaskSpec, workspace_dir: Path) -> Path:
 
     sections.extend([
         "",
-        "## Expected Patch Format",
-        "```text",
-        "SEARCH",
-        "<exact old text>",
-        "END_SEARCH",
-        "REPLACE",
-        "<new text>",
-        "END_REPLACE",
+        "## Expected Selection Format",
+        "```json",
+        '{"candidate_id":"<id>","replacement":"<new text>","reason":"<short reason>"}',
         "```",
     ])
 
