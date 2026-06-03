@@ -207,6 +207,31 @@ class TestCore(unittest.TestCase):
             with self.assertRaises(GatekeeperError):
                 inspect_patch(target, patch)
 
+    def test_gatekeeper_rejects_docstring_glued_to_def(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text(
+                '"""Module docs."""\n\n'
+                "def add(a, b):\n"
+                "    return a + b\n",
+                encoding="utf-8",
+            )
+            patch = (
+                "SEARCH\n"
+                '"""Module docs."""\n\n'
+                "def add(a, b):\n"
+                "    return a + b\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                '"""Module docs."""\n'
+                "def add(a, b):\n"
+                "    return a + b\n"
+                "END_REPLACE\n"
+            )
+            with self.assertRaises(GatekeeperError):
+                inspect_patch(target, patch)
+
     def test_context_builder(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

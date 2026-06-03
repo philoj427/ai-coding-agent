@@ -68,4 +68,11 @@ def inspect_patch(target_file: Path, patch_text: str) -> GatekeeperResult:
                     raise GatekeeperError(f"Duplicate top-level function definition: {name}")
                 top_level_defs.add(name)
 
+        if updated_text.startswith('"""'):
+            docstring_end = updated_text.find('"""', 3)
+            if docstring_end != -1:
+                tail = updated_text[docstring_end + 3 :]
+                if tail.startswith("\ndef ") or tail.startswith("\n\ndef "):
+                    raise GatekeeperError("Module docstring must be separated from top-level defs by a blank line")
+
     return GatekeeperResult(True, "ok", diff_text)
