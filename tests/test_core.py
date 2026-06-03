@@ -365,9 +365,11 @@ class TestCore(unittest.TestCase):
                 target.read_text(encoding="utf-8"),
                 "def greet(name):\n    return f'Hello {name}'\n",
             )
+            report = (root / "workspace" / "test_result.txt").read_text(encoding="utf-8")
+            self.assertIn("Stage: gatekeeper", report)
             self.assertIn(
                 "SEARCH/REPLACE patch must change target file",
-                (root / "workspace" / "test_result.txt").read_text(encoding="utf-8"),
+                report,
             )
 
     def test_run_workflow_cleans_untracked_file_on_test_failure(self):
@@ -404,10 +406,13 @@ class TestCore(unittest.TestCase):
             class FakeResult:
                 passed = False
                 exit_code = 1
+                output = "temp artifact\n"
 
             rogue = root / "rogue.log"
 
             def fake_run_tests(*args, **kwargs):
+                workspace_dir = args[3]
+                (workspace_dir / "test_result.txt").write_text("temp artifact\n", encoding="utf-8")
                 rogue.write_text("temp artifact\n", encoding="utf-8")
                 return FakeResult()
 
@@ -432,6 +437,9 @@ class TestCore(unittest.TestCase):
                 (root / "workspace" / "git_diff.txt").read_text(encoding="utf-8"),
                 "",
             )
+            report = (root / "workspace" / "test_result.txt").read_text(encoding="utf-8")
+            self.assertIn("Stage: tests", report)
+            self.assertIn("temp artifact", report)
 
     def test_run_workflow_retries_once_on_patch_parse_failure(self):
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -15,6 +15,30 @@ from .task import TaskSpec
 from .test_runner import run_tests
 
 
+def _classify_failure(exc: Exception) -> str:
+    if isinstance(exc, GatekeeperError):
+        return "gatekeeper"
+    if isinstance(exc, PatchParseError):
+        return "patch-parse"
+    if isinstance(exc, subprocess.CalledProcessError):
+        return "py_compile"
+    if isinstance(exc, RuntimeError):
+        return "ollama"
+    if isinstance(exc, GitGuardError):
+        return "git-guard"
+    return "workflow"
+
+
+def _write_failure_report(workspace_dir: Path, *, stage: str, reason: str, details: str | None = None) -> None:
+    lines = [
+        f"Stage: {stage}",
+        f"Reason: {reason}",
+    ]
+    if details:
+        lines.extend(["", details.rstrip("\n")])
+    (workspace_dir / "test_result.txt").write_text("\n".join(lines).rstrip("\n") + "\n", encoding="utf-8")
+
+
 def _py_compile_target(target_path: Path) -> None:
     if target_path.suffix != ".py":
         return
@@ -110,6 +134,12 @@ def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, o
             restore_clean_worktree(root)
             workspace_dir.mkdir(parents=True, exist_ok=True)
             (workspace_dir / "git_diff.txt").write_text("", encoding="utf-8")
+            _write_failure_report(
+                workspace_dir,
+                stage="tests",
+                reason=f"Test command exited with code {test_result.exit_code}",
+                details=getattr(test_result, "output", ""),
+            )
             return test_result.exit_code
 
         validate_allowed_changes(root, {target_path})
@@ -124,7 +154,11 @@ def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, o
         except Exception:
             pass
         workspace_dir.mkdir(parents=True, exist_ok=True)
-        (workspace_dir / "test_result.txt").write_text(f"{exc}\n", encoding="utf-8")
+        _write_failure_report(
+            workspace_dir,
+            stage=_classify_failure(exc),
+            reason=str(exc),
+        )
         (workspace_dir / "git_diff.txt").write_text("", encoding="utf-8")
         return 1
 

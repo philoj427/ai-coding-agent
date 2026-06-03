@@ -33,6 +33,7 @@ The core suite covers:
 - Line-level indentation-only rejection
 - Gatekeeper pre-application rejection
 - Retry once after malformed patch output
+- Structured failure reports with stage and reason
 - Git Guard blocking unauthorized staged files
 - Git Guard blocking unauthorized untracked files
 - Workflow rollback when tests fail
