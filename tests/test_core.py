@@ -1,12 +1,15 @@
 import tempfile
 from pathlib import Path
 import unittest
+from unittest import mock
 
 from ai_coding_agent.context_builder import build_context_pack
 from ai_coding_agent.git_guard import GitGuardError, ensure_clean_worktree, validate_allowed_changes
+from ai_coding_agent.patch_applier import PatchParseError
 from ai_coding_agent.patch_applier import apply_search_replace_patch
 from ai_coding_agent.patch_parser import parse_search_replace_patch
 from ai_coding_agent.task import TaskSpec
+from ai_coding_agent.workflow import run_workflow
 
 
 class TestCore(unittest.TestCase):
@@ -54,6 +57,44 @@ class TestCore(unittest.TestCase):
             apply_search_replace_patch(target, patch)
             self.assertIn("        return 2\n", target.read_text(encoding="utf-8"))
 
+    def test_patch_apply_raises_when_search_matches_multiple_locations(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text(
+                "def add(a, b):\n"
+                "    return a + b\n\n"
+                "def add_twice(a, b):\n"
+                "    return a + b\n",
+                encoding="utf-8",
+            )
+            patch = (
+                "SEARCH\n"
+                "    return a + b\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "    return a - b\n"
+                "END_REPLACE\n"
+            )
+            with self.assertRaises(PatchParseError):
+                apply_search_replace_patch(target, patch)
+
+    def test_patch_apply_raises_when_search_not_found(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text("value = 1\n", encoding="utf-8")
+            patch = (
+                "SEARCH\n"
+                "missing_value = 1\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "value = 2\n"
+                "END_REPLACE\n"
+            )
+            with self.assertRaises(PatchParseError):
+                apply_search_replace_patch(target, patch)
+
     def test_context_builder(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -93,6 +134,61 @@ class TestCore(unittest.TestCase):
             self._git(root, "commit", "-m", "baseline")
 
             ensure_clean_worktree(root)
+
+    def test_run_workflow_rolls_back_target_file_on_test_failure(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._init_git_repo(root)
+
+            target = root / "demo.py"
+            target.write_text(
+                "def greet(name):\n"
+                "    return f'Hello {name}'\n",
+                encoding="utf-8",
+            )
+            task_file = root / "task.txt"
+            task_file.write_text(
+                "demo.py | pytest | tests/test_demo.py | Make greet add punctuation.\n",
+                encoding="utf-8",
+            )
+            (root / "tests").mkdir()
+            (root / "tests" / "test_demo.py").write_text("import unittest\n", encoding="utf-8")
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-m", "baseline")
+
+            patch = (
+                "SEARCH\n"
+                "    return f'Hello {name}'\n"
+                "END_SEARCH\n"
+                "REPLACE\n"
+                "    return f'Hello {name}!'\n"
+                "END_REPLACE\n"
+            )
+
+            class FakeResult:
+                passed = False
+                exit_code = 1
+
+            with mock.patch("ai_coding_agent.workflow.generate_patch", return_value=patch), \
+                 mock.patch("ai_coding_agent.workflow.run_tests", return_value=FakeResult()):
+                exit_code = run_workflow(
+                    root=root,
+                    task_path=task_file,
+                    workspace_dir=root / "workspace",
+                    model="qwen2.5-coder:7b",
+                    ollama_host="http://localhost:11434",
+                    dry_run=False,
+                )
+
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(
+                target.read_text(encoding="utf-8"),
+                "def greet(name):\n    return f'Hello {name}'\n",
+            )
+            self.assertEqual(
+                (root / "workspace" / "git_diff.txt").read_text(encoding="utf-8"),
+                "",
+            )
 
     def _init_git_repo(self, root: Path) -> None:
         self._git(root, "init")
