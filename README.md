@@ -4,10 +4,10 @@ Local-first AI coding agent prototype based on the V1.35 architecture review.
 
 ## Goals
 
-- Keep code changes small and patch-based.
-- Use Python to enforce safety rules.
-- Validate changes with tests before review.
-- Keep the workflow local-first and easy to inspect.
+- Keep changes small and patch-based.
+- Enforce safety rules in Python.
+- Validate before review.
+- Stay local-first and easy to inspect.
 
 ## Workflow
 
