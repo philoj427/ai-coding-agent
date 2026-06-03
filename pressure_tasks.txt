@@ -1,0 +1,52 @@
+demo_add.py | pytest | tests/test_demo_add.py | Rewrite the module docstring in a concise style that still explains the file is a numeric addition helper with input validation, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Rewrite the function docstring for add() to be shorter but still describe numeric addition and TypeError behavior, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Reword the module docstring to sound more formal, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Reword the module docstring to mention that the helper is intentionally small, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a module-level __all__ declaration that exports only add, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Introduce a module-level NUMERIC_TYPES constant set to (int, float), while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Update the validation logic to use NUMERIC_TYPES instead of repeating (int, float), while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Introduce a local variable named total inside add() and return it, while leaving behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a short comment above the validation block that explains the numeric check, while leaving behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a short comment above the return statement that explains it returns the computed sum, while leaving behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Extract the numeric check into a helper function named _is_numeric(value), while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Update add() to call _is_numeric() for each argument, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Extract the validation logic into a helper named _validate_numbers(a, b), while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Move the numeric validation into _validate_numbers() and call it from add(), while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a docstring to the new validation helper explaining its purpose, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add type annotations to the validation helper, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Change the TypeError message to be shorter and more direct, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Update the function docstring to mention that add() raises TypeError for non-numeric inputs, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add an explanatory comment for the module-level numeric types declaration, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a module-level __version__ string set to "1.0.0", while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Rewrite the module docstring into two short sentences instead of one paragraph, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Rewrite the module docstring to use the phrase "tiny helper" and keep the validation explanation, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Rename the local sum variable to result and return that variable, while leaving behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Rename the helper _is_numeric() to _is_number(), while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Factor the addition expression into a helper named _sum(a, b), while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Call the new _sum(a, b) helper from add(), while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a docstring to _sum() describing that it returns a + b, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add type annotations to _sum(), while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Rewrite the validation as a guard clause that raises TypeError early, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Rewrite the validation using all(...) over the two inputs, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Split the validation across multiple lines for readability, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a module docstring example showing add(2, 3) returns 5, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a short comment near the TypeError raise explaining that both arguments must be numeric, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Introduce a helper named _raise_numeric_type_error() and use it in add(), while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Make the helper _raise_numeric_type_error() raise the existing TypeError message, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Change the module docstring tone from descriptive to instructional, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a module-level constant named MODULE_NAME with the value "demo_add", while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a module-level constant named DEFAULT_NUMERIC_TYPES set to (int, float), while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Update validation to reference DEFAULT_NUMERIC_TYPES, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Introduce a type alias named Numeric = int | float and use it in add(), while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Use the Numeric alias in the helper function signatures as well, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a module docstring note that the file intentionally stays small and focused, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Rewrite the module docstring to be one sentence plus one supporting sentence, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Reorder the docstring sentences so the validation sentence comes first, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Replace the inline validation with a reusable helper that returns a bool, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Update add() to call the bool-returning helper and raise TypeError when it returns False, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a short module comment explaining that the file is safe to patch in small increments, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Add a brief note in the function docstring that the helper is intended for simple numeric inputs, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Tighten the module docstring so it explicitly says only two numeric inputs are supported, while leaving function behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Refactor add() to assign the validation result to a variable before raising TypeError, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Refactor add() to use a small internal helper and a single return path, while keeping behavior unchanged.
+demo_add.py | pytest | tests/test_demo_add.py | Keep the public behavior the same while polishing docstrings, helper names, and inline comments for clarity.
