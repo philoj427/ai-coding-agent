@@ -25,6 +25,11 @@ def _git(root: Path, *args: str, check: bool = True) -> subprocess.CompletedProc
     )
 
 
+def _git_names(root: Path, *args: str) -> list[str]:
+    result = _git(root, *args)
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
 def detect_git_state(root: Path) -> GitState:
     probe = subprocess.run(
         ["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
@@ -34,9 +39,12 @@ def detect_git_state(root: Path) -> GitState:
     if probe.returncode != 0:
         return GitState(False, False, [])
 
-    status = _git(root, "status", "--porcelain")
-    changed = [line[3:] for line in status.stdout.splitlines() if line.strip()]
-    return GitState(True, len(changed) == 0, changed)
+    changed = []
+    changed.extend(_git_names(root, "diff", "--name-only"))
+    changed.extend(_git_names(root, "diff", "--name-only", "--cached"))
+    changed.extend(_git_names(root, "ls-files", "--others", "--exclude-standard"))
+    deduped = sorted(set(changed))
+    return GitState(True, len(deduped) == 0, deduped)
 
 
 def ensure_clean_worktree(root: Path) -> None:
