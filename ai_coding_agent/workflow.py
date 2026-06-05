@@ -12,6 +12,7 @@ from .candidate_scorer import rank_candidates
 from .context_builder import build_context_pack
 from .gatekeeper import GatekeeperError, inspect_patch
 from .git_guard import GitGuardError, ensure_clean_worktree, git_diff, restore_clean_worktree, validate_allowed_changes
+from .local_templates import build_local_template_patch
 from .patch_applier import PatchParseError, apply_search_replace_patch
 from .patch_parser import parse_search_replace_patch
 from .search_candidates import SearchCandidate, build_search_candidates
@@ -199,16 +200,25 @@ def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, o
 
     try:
         target_path = (root / task.target_file).resolve()
-        _generate_and_apply_patch(
-            root=root,
-            target_path=target_path,
-            model=model,
-            prompt=prompt,
-            ollama_host=ollama_host,
-            patch_path=patch_path,
-            dry_run=dry_run,
-            task_description=task.description,
-        )
+        local_patch = build_local_template_patch(root, task)
+        if local_patch and not dry_run:
+            patch_path.parent.mkdir(parents=True, exist_ok=True)
+            patch_path.write_text(local_patch, encoding="utf-8")
+            inspect_patch(target_path, local_patch)
+            apply_search_replace_patch(target_path, local_patch)
+            _py_compile_target(target_path)
+            _cleanup_pycache(target_path)
+        else:
+            _generate_and_apply_patch(
+                root=root,
+                target_path=target_path,
+                model=model,
+                prompt=prompt,
+                ollama_host=ollama_host,
+                patch_path=patch_path,
+                dry_run=dry_run,
+                task_description=task.description,
+            )
         test_result = run_tests(root, task.test_type, task.test_file, workspace_dir)
         if not test_result.passed:
             restore_clean_worktree(root)
