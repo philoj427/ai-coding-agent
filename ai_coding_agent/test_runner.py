@@ -36,6 +36,10 @@ def run_tests(root: Path, test_type: str, test_file: Path | None, workspace_dir:
                 cmd.extend(["-p", Path(test_file).name])
     elif test_type == "npm test":
         cmd = ["npm", "test"]
+    elif test_type == "unittest":
+        cmd = [sys.executable, "-m", "unittest", "discover", "-s", "tests"]
+        if test_file is not None:
+            cmd.extend(["-p", Path(test_file).name])
     else:
         raise ValueError(f"Unsupported test type: {test_type}")
 

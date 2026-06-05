@@ -15,6 +15,8 @@ from .git_guard import GitGuardError, ensure_clean_worktree, git_diff, restore_c
 from .local_templates import build_local_template_patch
 from .patch_applier import PatchParseError, apply_search_replace_patch
 from .patch_parser import parse_search_replace_patch
+from .plan_validator import PlanValidationError, validate_plan
+from .planner import plan_task
 from .search_candidates import SearchCandidate, build_search_candidates
 from .task import TaskSpec
 from .test_runner import run_tests
@@ -61,6 +63,16 @@ def _cleanup_pycache(target_path: Path) -> None:
         pycache_dir.rmdir()
     except OSError:
         pass
+
+
+def _cleanup_repo_pycache(root: Path) -> None:
+    for pycache_dir in root.rglob("__pycache__"):
+        for pyc_path in pycache_dir.glob("*.pyc"):
+            pyc_path.unlink()
+        try:
+            pycache_dir.rmdir()
+        except OSError:
+            pass
 
 
 def _compose_patch(candidate: SearchCandidate, replacement: str) -> str:
@@ -184,11 +196,31 @@ def _failure_details_for_patch_error(exc: Exception) -> str | None:
     return None
 
 
+def _load_task(root: Path, task_path: Path, workspace_dir: Path, model: str, ollama_host: str) -> TaskSpec:
+    task_text = task_path.read_text(encoding="utf-8").strip()
+    if "|" in task_text:
+        return TaskSpec.from_text(task_text)
+
+    plan = plan_task(root, task_text, model, ollama_host)
+    validate_plan(root, plan)
+    (workspace_dir / "task_plan.json").write_text(
+        json_dumps(plan.to_dict()),
+        encoding="utf-8",
+    )
+    return plan.to_task_spec()
+
+
+def json_dumps(payload: dict[str, object]) -> str:
+    import json
+
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
 def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, ollama_host: str, dry_run: bool = False) -> int:
-    task = TaskSpec.from_file(task_path)
     workspace_dir.mkdir(parents=True, exist_ok=True)
 
     ensure_clean_worktree(root)
+    task = _load_task(root, task_path, workspace_dir, model, ollama_host)
 
     context_path = build_context_pack(root, task, workspace_dir)
     context_text = context_path.read_text(encoding="utf-8")
@@ -232,11 +264,12 @@ def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, o
             )
             return test_result.exit_code
 
+        _cleanup_repo_pycache(root)
         validate_allowed_changes(root, {target_path})
         diff_text = git_diff(root, target_path)
         (workspace_dir / "git_diff.txt").write_text(diff_text, encoding="utf-8")
         return 0
-    except (GitGuardError, GatekeeperError, PatchParseError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
+    except (GitGuardError, GatekeeperError, PatchParseError, PlanValidationError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
         try:
             restore_clean_worktree(root)
         except GitGuardError:

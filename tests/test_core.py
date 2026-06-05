@@ -14,7 +14,10 @@ from ai_coding_agent.git_guard import GitGuardError, ensure_clean_worktree, vali
 from ai_coding_agent.patch_applier import PatchParseError
 from ai_coding_agent.patch_applier import apply_search_replace_patch
 from ai_coding_agent.patch_parser import parse_search_replace_patch
+from ai_coding_agent.plan_validator import PlanValidationError, validate_plan
+from ai_coding_agent.planner import plan_task
 from ai_coding_agent.task import TaskSpec
+from ai_coding_agent.task_plan import TaskPlan
 from ai_coding_agent.workflow import run_workflow
 
 
@@ -44,6 +47,53 @@ class TestCore(unittest.TestCase):
         self.assertEqual(task.target_file, Path("app.py"))
         self.assertEqual(task.test_type, "pytest")
         self.assertEqual(task.test_file, Path("tests/test_app.py"))
+
+    def test_task_plan_to_task_spec(self):
+        plan = TaskPlan.from_dict(
+            {
+                "target_file": "demo_add.py",
+                "test_type": "unittest",
+                "test_file": "tests/test_demo_add.py",
+                "risk_level": "low",
+                "reason": "demo",
+                "allowed_files": ["demo_add.py"],
+                "forbidden_files": ["README.md"],
+            },
+            "Add type hints",
+        )
+        task = plan.to_task_spec()
+        self.assertEqual(task.target_file, Path("demo_add.py"))
+        self.assertEqual(task.test_type, "unittest")
+        self.assertEqual(task.description, "Add type hints")
+
+    def test_plan_validator_rejects_missing_target(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            plan = TaskPlan.from_dict(
+                {
+                    "target_file": "missing.py",
+                    "test_type": "unittest",
+                    "test_file": None,
+                    "risk_level": "low",
+                    "reason": "demo",
+                    "allowed_files": ["missing.py"],
+                    "forbidden_files": [],
+                },
+                "demo",
+            )
+            with self.assertRaises(PlanValidationError):
+                validate_plan(root, plan)
+
+    def test_planner_fallback_for_demo_add_task(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "demo_add.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+            (root / "tests").mkdir()
+            (root / "tests" / "test_demo_add.py").write_text("import unittest\n", encoding="utf-8")
+            with mock.patch("ai_coding_agent.planner.generate_patch", side_effect=RuntimeError("offline")):
+                plan = plan_task(root, "Help add function get type hints", "model", "host")
+            self.assertEqual(plan.target_file, Path("demo_add.py"))
+            self.assertEqual(plan.test_type, "unittest")
 
     def test_patch_parse(self):
         patch = "SEARCH\nold\nEND_SEARCH\nREPLACE\nnew\nEND_REPLACE\n"
@@ -824,6 +874,54 @@ class TestCore(unittest.TestCase):
                 "",
             )
             self.assertFalse(any(root.rglob("__pycache__")))
+
+    def test_run_workflow_accepts_natural_language_task_with_planner(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._init_git_repo(root)
+            (root / ".gitignore").write_text("workspace/\n", encoding="utf-8")
+
+            target = root / "demo_add.py"
+            target.write_text(
+                '"""Old docs."""\n'
+                "\n"
+                "def add(a: int | float, b: int | float) -> int | float:\n"
+                "    \"\"\"Return a + b.\"\"\"\n"
+                "    if not isinstance(a, (int, float)) or not isinstance(b, (int, float)):\n"
+                "        raise TypeError(\"Both arguments must be numeric\")\n"
+                "    return a + b\n",
+                encoding="utf-8",
+            )
+            (root / "tests").mkdir()
+            (root / "tests" / "test_demo_add.py").write_text(
+                "import unittest\n"
+                "from demo_add import add\n"
+                "\n"
+                "class TestDemoAdd(unittest.TestCase):\n"
+                "    def test_add(self):\n"
+                "        self.assertEqual(add(2, 3), 5)\n",
+                encoding="utf-8",
+            )
+            task_file = root / "task.txt"
+            task_file.write_text("Rewrite the module docstring for add helper.\n", encoding="utf-8")
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-m", "baseline")
+
+            with mock.patch("ai_coding_agent.planner.generate_patch", side_effect=RuntimeError("offline")):
+                exit_code = run_workflow(
+                    root=root,
+                    task_path=task_file,
+                    workspace_dir=root / "workspace",
+                    model="qwen2.5-coder:7b",
+                    ollama_host="http://localhost:11434",
+                    dry_run=False,
+                )
+
+            report_path = root / "workspace" / "test_result.txt"
+            report = report_path.read_text(encoding="utf-8") if report_path.exists() else "<missing report>"
+            self.assertEqual(exit_code, 0, report)
+            self.assertTrue((root / "workspace" / "task_plan.json").exists())
+            self.assertIn("A concise numeric addition helper", target.read_text(encoding="utf-8"))
 
     def _init_git_repo(self, root: Path) -> None:
         self._git(root, "init")
