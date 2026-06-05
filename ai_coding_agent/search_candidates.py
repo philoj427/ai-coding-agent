@@ -50,9 +50,9 @@ def _python_candidates(source: str) -> list[SearchCandidate]:
 
     for index, node in enumerate(tree.body):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            kind = "function" if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else "class"
             segment = ast.get_source_segment(source, node)
             if segment:
-                kind = "function" if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) else "class"
                 candidates.append(
                     SearchCandidate(
                         candidate_id=f"{kind}_{index}",
@@ -60,6 +60,39 @@ def _python_candidates(source: str) -> list[SearchCandidate]:
                         text=segment.rstrip("\n"),
                     )
                 )
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.body:
+                first_stmt = node.body[0]
+                if isinstance(first_stmt, ast.Expr) and isinstance(first_stmt.value, ast.Constant) and isinstance(first_stmt.value.value, str):
+                    doc_segment = ast.get_source_segment(source, first_stmt)
+                    if doc_segment:
+                        candidates.append(
+                            SearchCandidate(
+                                candidate_id=f"{kind}_{index}_docstring",
+                                label=f"{kind}_docstring:{node.name}",
+                                text=doc_segment.rstrip("\n"),
+                            )
+                        )
+                for stmt_index, stmt in enumerate(node.body):
+                    if isinstance(stmt, ast.If):
+                        block_segment = ast.get_source_segment(source, stmt)
+                        if block_segment:
+                            candidates.append(
+                                SearchCandidate(
+                                    candidate_id=f"{kind}_{index}_if_{stmt_index}",
+                                    label=f"{kind}_if_block:{node.name}",
+                                    text=block_segment.rstrip("\n"),
+                                )
+                            )
+                    elif isinstance(stmt, ast.Return):
+                        return_segment = ast.get_source_segment(source, stmt)
+                        if return_segment:
+                            candidates.append(
+                                SearchCandidate(
+                                    candidate_id=f"{kind}_{index}_return_{stmt_index}",
+                                    label=f"{kind}_return:{node.name}",
+                                    text=return_segment.rstrip("\n"),
+                                )
+                            )
             if getattr(node, "lineno", None) and getattr(node, "end_lineno", None):
                 for line_no in range(node.lineno, node.end_lineno):
                     if 0 <= line_no < len(lines):
@@ -116,4 +149,3 @@ def build_search_candidates(target_path: Path) -> list[SearchCandidate]:
     if not candidates and source.strip():
         candidates = _generic_candidates(source)
     return candidates
-

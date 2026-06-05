@@ -274,6 +274,7 @@ class TestCore(unittest.TestCase):
             candidates = build_search_candidates(target)
             self.assertTrue(any(candidate.text == '"""Module docs."""' for candidate in candidates))
             self.assertTrue(any(candidate.text.startswith("def add(a, b):") for candidate in candidates))
+            self.assertTrue(any("function_return" in candidate.label for candidate in candidates))
 
     def test_parse_candidate_selection(self):
         selection = parse_candidate_selection(
@@ -313,6 +314,33 @@ class TestCore(unittest.TestCase):
             )
             scored = score_candidates("Make greet add punctuation", build_search_candidates(target))
             self.assertIn("_line_", scored[0].candidate.candidate_id)
+
+    def test_candidate_scorer_prefers_function_docstring(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text(
+                "def add(a, b):\n"
+                "    \"\"\"Add two numbers.\"\"\"\n"
+                "    return a + b\n",
+                encoding="utf-8",
+            )
+            scored = score_candidates("Rewrite the function docstring for add()", build_search_candidates(target))
+            self.assertIn("function_docstring", scored[0].candidate.label)
+
+    def test_candidate_scorer_prefers_validation_if_block(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text(
+                "def add(a, b):\n"
+                "    if not isinstance(a, (int, float)):\n"
+                "        raise TypeError('bad')\n"
+                "    return a + b\n",
+                encoding="utf-8",
+            )
+            scored = score_candidates("Update the validation logic", build_search_candidates(target))
+            self.assertIn("if_block", scored[0].candidate.label)
 
     def test_validate_allowed_changes_blocks_unauthorized_files(self):
         with tempfile.TemporaryDirectory() as tmpdir:
