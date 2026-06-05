@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import subprocess
 from pathlib import Path
 
@@ -31,6 +32,23 @@ def reset_repo() -> None:
     subprocess.run(["git", "clean", "-fd"], cwd=str(ROOT), check=True, capture_output=True, text=True)
 
 
+def git_stdout(args: list[str]) -> str:
+    return subprocess.run(["git", *args], cwd=str(ROOT), check=True, capture_output=True, text=True).stdout.strip()
+
+
+def checkpoint(index: int) -> None:
+    subprocess.run(["git", "add", "-A"], cwd=str(ROOT), check=True, capture_output=True, text=True)
+    status = git_stdout(["status", "--porcelain"])
+    if status:
+        subprocess.run(
+            ["git", "commit", "-m", f"pressure checkpoint {index:02d}"],
+            cwd=str(ROOT),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+
 def parse_failure_report(text: str) -> tuple[str, str]:
     stage = ""
     reason = ""
@@ -42,9 +60,14 @@ def parse_failure_report(text: str) -> tuple[str, str]:
     return stage, reason
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Run pressure tasks.")
+    parser.add_argument("--sequence", action="store_true", help="Keep successful task changes as temporary checkpoints.")
+    args = parser.parse_args(argv)
+
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     tasks = read_tasks()
+    original_head = git_stdout(["rev-parse", "HEAD"])
 
     report_lines = [
         "# Pressure Test Report",
@@ -105,7 +128,13 @@ def main() -> int:
             report_lines.append(f"- Agent output: {combined.strip()}")
         report_lines.append("")
 
-        reset_repo()
+        if args.sequence:
+            if status == "PASS":
+                checkpoint(index)
+            else:
+                reset_repo()
+        else:
+            reset_repo()
 
     report_lines.extend(
         [
@@ -118,6 +147,9 @@ def main() -> int:
     )
 
     REPORT_PATH.write_text("\n".join(report_lines), encoding="utf-8")
+    if args.sequence:
+        subprocess.run(["git", "reset", "--hard", original_head], cwd=str(ROOT), check=True, capture_output=True, text=True)
+        subprocess.run(["git", "clean", "-fd"], cwd=str(ROOT), check=True, capture_output=True, text=True)
     print(f"Wrote {REPORT_PATH}")
     print(f"Passed: {pass_count}, Failed: {fail_count}")
     return 0
