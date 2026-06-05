@@ -4,7 +4,7 @@
 
 - Latest workflow attempt completed with local exact SEARCH candidates and deterministic local scoring.
 - The agent no longer asks Ollama to invent or select SEARCH text.
-- Latest unit test suite result: 35 tests passed.
+- Latest unit test suite result: 37 tests passed.
 
 ## Latest Automated Workflow Attempt
 
@@ -31,5 +31,5 @@
 
 ## Notes
 
-- The local candidate scorer is now the current architectural change under evaluation.
-- It removes Ollama from candidate ranking, but it has not yet improved the pressure pass rate.
+- The local candidate scorer now uses structural intent signals and conservative triggers.
+- It removes Ollama from candidate ranking, but it has not yet improved the pressure pass rate beyond 27/23.
