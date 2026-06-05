@@ -36,9 +36,12 @@ def score_candidates(task_description: str, candidates: list[SearchCandidate]) -
     task_tokens = _tokenize(task_description)
     prefers_module_docstring = "docstring" in task_tokens and "module" in task_tokens
     prefers_function_docstring = "docstring" in task_tokens and ("function" in task_tokens or "add" in task_tokens)
-    prefers_module_level = any(word in task_tokens for word in {"module", "level", "__all__", "__version__", "constant", "alias"})
+    prefers_module_level = (
+        {"module", "level"}.issubset(task_tokens)
+        or any(word in task_tokens for word in {"__all__", "__version__", "constant", "alias"})
+    )
     prefers_helper = any(word in task_tokens for word in {"helper", "extract", "factor", "reusable"})
-    prefers_validation = any(word in task_tokens for word in {"validation", "validate", "numeric", "typeerror", "raise", "guard"})
+    prefers_validation = any(word in task_tokens for word in {"validation", "validate", "typeerror", "guard", "check"})
     prefers_return = any(word in task_tokens for word in {"return", "sum", "total", "result"})
     prefers_typing = any(word in task_tokens for word in {"type", "typing", "signature", "annotations"})
     scored: list[ScoredCandidate] = []
