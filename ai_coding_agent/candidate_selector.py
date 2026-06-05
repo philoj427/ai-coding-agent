@@ -21,7 +21,7 @@ def _strip_code_fences(text: str) -> str:
 
 
 def build_candidate_context(candidates: list[SearchCandidate]) -> str:
-    sections = ["## Local Search Candidates", "Choose exactly one candidate id from this list.", ""]
+    sections = ["## Local Search Candidates", "These are exact target-file excerpts available to the local scorer.", ""]
     for candidate in candidates:
         sections.extend([
             f"### Candidate {candidate.candidate_id}",
@@ -42,4 +42,17 @@ def parse_candidate_selection(text: str) -> CandidateSelection:
     if not candidate_id:
         raise ValueError("candidate_id is required")
     return CandidateSelection(candidate_id=candidate_id, replacement=replacement, reason=reason)
+
+
+@dataclass(frozen=True)
+class ReplacementSelection:
+    replacement: str
+    reason: str
+
+
+def parse_replacement_selection(text: str) -> ReplacementSelection:
+    payload = json.loads(_strip_code_fences(text).strip())
+    replacement = str(payload["replacement"])
+    reason = str(payload.get("reason", "")).strip()
+    return ReplacementSelection(replacement=replacement, reason=reason)
 

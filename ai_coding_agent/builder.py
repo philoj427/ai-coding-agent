@@ -5,14 +5,14 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 
-SYSTEM_PROMPT = """Choose exactly one candidate from the local candidate list.
+SYSTEM_PROMPT = """Write a replacement for the already-selected exact SEARCH candidate.
 Return JSON only.
 No markdown fences.
 No explanations.
 Do not invent SEARCH text.
-Do not paraphrase candidate excerpts.
+Do not paraphrase the selected candidate.
 Use this exact JSON shape:
-{"candidate_id":"<id>","replacement":"<new text>","reason":"<short reason>"}
+{"replacement":"<new text>","reason":"<short reason>"}
 """
 
 

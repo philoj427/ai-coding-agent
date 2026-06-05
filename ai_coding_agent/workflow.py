@@ -7,7 +7,8 @@ import sys
 from pathlib import Path
 
 from .builder import build_prompt, generate_patch
-from .candidate_selector import CandidateSelection, parse_candidate_selection
+from .candidate_selector import parse_replacement_selection
+from .candidate_scorer import score_candidates
 from .context_builder import build_context_pack
 from .gatekeeper import GatekeeperError, inspect_patch
 from .git_guard import GitGuardError, ensure_clean_worktree, git_diff, restore_clean_worktree, validate_allowed_changes
@@ -72,31 +73,42 @@ def _compose_patch(candidate: SearchCandidate, replacement: str) -> str:
     )
 
 
-def _select_candidate(
+def _replacement_prompt(prompt: str, candidate: SearchCandidate) -> str:
+    return (
+        f"{prompt}\n"
+        "## Locally Selected Search Candidate\n"
+        f"- Candidate id: `{candidate.candidate_id}`\n"
+        f"- Label: `{candidate.label}`\n"
+        "\n"
+        "```text\n"
+        f"{candidate.text}\n"
+        "```\n"
+        "\n"
+        "Return only replacement JSON for this candidate.\n"
+    )
+
+
+def _generate_replacement(
     *,
     model: str,
     prompt: str,
     ollama_host: str,
-    candidates: list[SearchCandidate],
-) -> CandidateSelection:
-    if not candidates:
-        raise RuntimeError("No local search candidates available")
+    candidate: SearchCandidate,
+) -> str:
     selection_response = generate_patch(model=model, prompt=prompt, ollama_host=ollama_host)
     try:
-        selection = parse_candidate_selection(selection_response)
+        return parse_replacement_selection(selection_response).replacement
     except Exception:
-        parsed_pairs = parse_search_replace_patch(selection_response)
+        try:
+            parsed_pairs = parse_search_replace_patch(selection_response)
+        except Exception as exc:
+            raise ValueError("Replacement response was not valid JSON or legacy SEARCH/REPLACE") from exc
         if len(parsed_pairs) != 1:
-            raise
+            raise ValueError("Legacy patch response must contain exactly one SEARCH/REPLACE block")
         search_text, replacement_text = parsed_pairs[0]
-        for candidate in candidates:
-            if candidate.text == search_text:
-                return CandidateSelection(candidate_id=candidate.candidate_id, replacement=replacement_text, reason="legacy patch response")
-        raise RuntimeError("Legacy patch response did not match any local search candidate")
-    candidate_ids = {candidate.candidate_id for candidate in candidates}
-    if selection.candidate_id not in candidate_ids:
-        raise RuntimeError(f"Selected candidate_id {selection.candidate_id!r} is not in the local candidate list")
-    return selection
+        if search_text == candidate.text:
+            return replacement_text
+        raise ValueError("Legacy patch response did not match the locally selected search candidate")
 
 
 def _generate_and_apply_patch(
@@ -108,6 +120,7 @@ def _generate_and_apply_patch(
     ollama_host: str,
     patch_path: Path,
     dry_run: bool,
+    task_description: str,
     retry_on_failure: bool = True,
 ) -> None:
     attempts = 2 if retry_on_failure else 1
@@ -122,17 +135,20 @@ def _generate_and_apply_patch(
             if attempt > 0:
                 attempt_prompt = (
                     f"{prompt}\n"
-                    "Retry instruction: choose one of the local candidate ids only, do not invent SEARCH text, keep the replacement minimal, preserve indentation exactly, and return valid JSON only.\n"
+                    "Retry instruction: use the locally selected SEARCH candidate exactly, keep the replacement minimal, preserve indentation exactly, and return valid JSON only.\n"
                 )
             candidates = build_search_candidates(target_path)
-            selection = _select_candidate(
+            scored_candidates = score_candidates(task_description, candidates)
+            if not scored_candidates:
+                raise RuntimeError("No local search candidates available")
+            selected_candidate = scored_candidates[0].candidate
+            replacement = _generate_replacement(
                 model=model,
-                prompt=attempt_prompt,
+                prompt=_replacement_prompt(attempt_prompt, selected_candidate),
                 ollama_host=ollama_host,
-                candidates=candidates,
+                candidate=selected_candidate,
             )
-            candidate_map = {candidate.candidate_id: candidate for candidate in candidates}
-            patch_text = _compose_patch(candidate_map[selection.candidate_id], selection.replacement)
+            patch_text = _compose_patch(selected_candidate, replacement)
             patch_path.parent.mkdir(parents=True, exist_ok=True)
             patch_path.write_text(patch_text, encoding="utf-8")
             inspect_patch(target_path, patch_text)
@@ -183,6 +199,7 @@ def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, o
             ollama_host=ollama_host,
             patch_path=patch_path,
             dry_run=dry_run,
+            task_description=task.description,
         )
         test_result = run_tests(root, task.test_type, task.test_file, workspace_dir)
         if not test_result.passed:

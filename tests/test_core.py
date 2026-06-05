@@ -6,7 +6,8 @@ from unittest import mock
 from ai_coding_agent.context_builder import build_context_pack
 from ai_coding_agent.builder import build_prompt
 from ai_coding_agent.builder import _strip_code_fences
-from ai_coding_agent.candidate_selector import parse_candidate_selection
+from ai_coding_agent.candidate_selector import parse_candidate_selection, parse_replacement_selection
+from ai_coding_agent.candidate_scorer import score_candidates
 from ai_coding_agent.search_candidates import build_search_candidates
 from ai_coding_agent.gatekeeper import GatekeeperError, inspect_patch
 from ai_coding_agent.git_guard import GitGuardError, ensure_clean_worktree, validate_allowed_changes
@@ -20,9 +21,9 @@ from ai_coding_agent.workflow import run_workflow
 class TestCore(unittest.TestCase):
     def test_build_prompt_is_strict_and_compact(self):
         prompt = build_prompt("context")
-        self.assertIn("Choose exactly one candidate from the local candidate list.", prompt)
+        self.assertIn("Write a replacement for the already-selected exact SEARCH candidate.", prompt)
         self.assertIn("Return JSON only.", prompt)
-        self.assertIn('"candidate_id":"<id>"', prompt)
+        self.assertIn('"replacement":"<new text>"', prompt)
         self.assertTrue(prompt.endswith("\n"))
 
     def test_retry_instruction_mentions_exact_match(self):
@@ -280,6 +281,38 @@ class TestCore(unittest.TestCase):
         )
         self.assertEqual(selection.candidate_id, "function_1")
         self.assertEqual(selection.replacement, "return a + b!")
+
+    def test_parse_replacement_selection(self):
+        selection = parse_replacement_selection(
+            '{"replacement":"return a + b!","reason":"punctuation"}'
+        )
+        self.assertEqual(selection.replacement, "return a + b!")
+
+    def test_candidate_scorer_prefers_docstring_for_docstring_task(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text(
+                '"""Module docs."""\n'
+                "\n"
+                "def add(a, b):\n"
+                "    return a + b\n",
+                encoding="utf-8",
+            )
+            scored = score_candidates("Revise the module docstring", build_search_candidates(target))
+            self.assertEqual(scored[0].candidate.candidate_id, "docstring")
+
+    def test_candidate_scorer_prefers_line_for_small_change(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text(
+                "def greet(name):\n"
+                "    return f'Hello {name}'\n",
+                encoding="utf-8",
+            )
+            scored = score_candidates("Make greet add punctuation", build_search_candidates(target))
+            self.assertIn("_line_", scored[0].candidate.candidate_id)
 
     def test_validate_allowed_changes_blocks_unauthorized_files(self):
         with tempfile.TemporaryDirectory() as tmpdir:

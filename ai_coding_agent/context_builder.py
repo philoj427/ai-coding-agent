@@ -75,7 +75,7 @@ def build_context_pack(root: Path, task: TaskSpec, workspace_dir: Path) -> Path:
         "```",
         "",
         "## Exact Search Candidates",
-        "The model must select one of these exact candidate excerpts. Do not invent SEARCH text.",
+        "The local scorer selects one of these exact candidate excerpts before replacement generation.",
         "",
         build_candidate_context(candidates) if candidates else "<no candidates found>",
     ]
@@ -96,7 +96,7 @@ def build_context_pack(root: Path, task: TaskSpec, workspace_dir: Path) -> Path:
         "",
         "## Expected Selection Format",
         "```json",
-        '{"candidate_id":"<id>","replacement":"<new text>","reason":"<short reason>"}',
+        '{"replacement":"<new text>","reason":"<short reason>"}',
         "```",
     ])
 
