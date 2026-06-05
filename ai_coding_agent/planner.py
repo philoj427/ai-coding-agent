@@ -69,12 +69,11 @@ def _extract_json(text: str) -> str:
 
 def plan_task(root: Path, description: str, model: str, ollama_host: str) -> TaskPlan:
     fallback = _fallback_plan(root, description)
+    if fallback is not None:
+        return fallback
     try:
         response = generate_patch(model=model, prompt=_planner_prompt(root, description), ollama_host=ollama_host)
         payload = json.loads(_extract_json(response))
         return TaskPlan.from_dict(payload, description)
     except Exception:
-        if fallback is not None:
-            return fallback
         raise
-
