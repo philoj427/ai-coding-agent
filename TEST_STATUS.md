@@ -5,7 +5,8 @@
 - Latest workflow attempt completed with deterministic local templates for the demo pressure suite.
 - The agent no longer asks Ollama to invent or select SEARCH text for local candidate flow.
 - V1.7 planner can turn a natural-language task into `task_plan.json`.
-- Latest unit test suite result: 42 tests passed.
+- V1.8 project index maps symbols to target files and related tests.
+- Latest unit test suite result: 46 tests passed.
 
 ## Latest Automated Workflow Attempt
 
@@ -19,6 +20,7 @@
 - Run: `python .\agent.py --root . --task workspace\natural_task.txt --model qwen2.5-coder:7b`
 - Result: success
 - Generated plan: `demo_add.py`, `unittest`, `tests/test_demo_add.py`, `risk_level=low`
+- Index check: `幫 divide 函數加 0 防呆` selected `math_tool.py`, `unittest`, `tests/test_math_tool.py`
 
 ## Latest Failure Pattern
 
@@ -34,6 +36,7 @@
 - `__pycache__` cleanup still runs after successful syntax validation
 - demo pressure templates still go through Gatekeeper, patch application, `py_compile`, tests, and Git Guard
 - V1.7 plans are validated before patch workflow starts
+- V1.8 project index respects protected files from `memory/PROTECTED_FILES.md`
 
 ## Notes
 
@@ -41,3 +44,4 @@
 - Deterministic demo templates lifted the pressure result from 34/16 to 50/0.
 - This is a suite-specific hardening layer for `demo_add.py`, not a general multi-file production claim.
 - V1.7 still enforces a single target file.
+- V1.8 still enforces a single target file.
