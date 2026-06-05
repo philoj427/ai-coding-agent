@@ -7,7 +7,7 @@ from ai_coding_agent.context_builder import build_context_pack
 from ai_coding_agent.builder import build_prompt
 from ai_coding_agent.builder import _strip_code_fences
 from ai_coding_agent.candidate_selector import parse_candidate_selection, parse_replacement_selection
-from ai_coding_agent.candidate_scorer import score_candidates
+from ai_coding_agent.candidate_scorer import rank_candidates, score_candidates
 from ai_coding_agent.search_candidates import build_search_candidates
 from ai_coding_agent.gatekeeper import GatekeeperError, inspect_patch
 from ai_coding_agent.git_guard import GitGuardError, ensure_clean_worktree, validate_allowed_changes
@@ -341,6 +341,20 @@ class TestCore(unittest.TestCase):
             )
             scored = score_candidates("Update the validation logic", build_search_candidates(target))
             self.assertIn("if_block", scored[0].candidate.label)
+
+    def test_candidate_ranker_adds_structural_fallbacks_for_low_confidence(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            target = root / "app.py"
+            target.write_text(
+                "def greet(name):\n"
+                "    message = f'Hello {name}'\n"
+                "    return message\n",
+                encoding="utf-8",
+            )
+            ranked = rank_candidates("Make greet clearer", build_search_candidates(target))
+            self.assertGreaterEqual(len(ranked), 2)
+            self.assertTrue(any("top_level_function" in candidate.label for candidate in ranked[:3]))
 
     def test_validate_allowed_changes_blocks_unauthorized_files(self):
         with tempfile.TemporaryDirectory() as tmpdir:

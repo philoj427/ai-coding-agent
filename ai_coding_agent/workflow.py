@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .builder import build_prompt, generate_patch
 from .candidate_selector import parse_replacement_selection
-from .candidate_scorer import score_candidates
+from .candidate_scorer import rank_candidates
 from .context_builder import build_context_pack
 from .gatekeeper import GatekeeperError, inspect_patch
 from .git_guard import GitGuardError, ensure_clean_worktree, git_diff, restore_clean_worktree, validate_allowed_changes
@@ -138,24 +138,32 @@ def _generate_and_apply_patch(
                     "Retry instruction: use the locally selected SEARCH candidate exactly, keep the replacement minimal, preserve indentation exactly, and return valid JSON only.\n"
                 )
             candidates = build_search_candidates(target_path)
-            scored_candidates = score_candidates(task_description, candidates)
-            if not scored_candidates:
+            ranked_candidates = rank_candidates(task_description, candidates)
+            if not ranked_candidates:
                 raise RuntimeError("No local search candidates available")
-            selected_candidate = scored_candidates[0].candidate
-            replacement = _generate_replacement(
-                model=model,
-                prompt=_replacement_prompt(attempt_prompt, selected_candidate),
-                ollama_host=ollama_host,
-                candidate=selected_candidate,
-            )
-            patch_text = _compose_patch(selected_candidate, replacement)
-            patch_path.parent.mkdir(parents=True, exist_ok=True)
-            patch_path.write_text(patch_text, encoding="utf-8")
-            inspect_patch(target_path, patch_text)
-            apply_search_replace_patch(target_path, patch_text)
-            _py_compile_target(target_path)
-            _cleanup_pycache(target_path)
-            return
+            for selected_candidate in ranked_candidates:
+                try:
+                    replacement = _generate_replacement(
+                        model=model,
+                        prompt=_replacement_prompt(attempt_prompt, selected_candidate),
+                        ollama_host=ollama_host,
+                        candidate=selected_candidate,
+                    )
+                    patch_text = _compose_patch(selected_candidate, replacement)
+                    patch_path.parent.mkdir(parents=True, exist_ok=True)
+                    patch_path.write_text(patch_text, encoding="utf-8")
+                    inspect_patch(target_path, patch_text)
+                    apply_search_replace_patch(target_path, patch_text)
+                    _py_compile_target(target_path)
+                    _cleanup_pycache(target_path)
+                    return
+                except ValueError:
+                    raise
+                except (GatekeeperError, PatchParseError, subprocess.CalledProcessError, RuntimeError) as exc:
+                    last_error = exc
+                    restore_clean_worktree(root)
+                    patch_path.parent.mkdir(parents=True, exist_ok=True)
+                    continue
         except (GatekeeperError, PatchParseError, subprocess.CalledProcessError, RuntimeError, ValueError) as exc:
             last_error = exc
             restore_clean_worktree(root)

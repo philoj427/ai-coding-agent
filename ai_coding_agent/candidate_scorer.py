@@ -105,3 +105,38 @@ def score_candidates(task_description: str, candidates: list[SearchCandidate]) -
 
     scored.sort(key=lambda item: (-item.score, item.candidate.candidate_id))
     return scored
+
+
+def rank_candidates(task_description: str, candidates: list[SearchCandidate], max_candidates: int = 3) -> list[SearchCandidate]:
+    scored = score_candidates(task_description, candidates)
+    if not scored:
+        return []
+
+    ranked: list[SearchCandidate] = []
+    seen: set[str] = set()
+
+    def add(candidate: SearchCandidate) -> None:
+        if candidate.candidate_id in seen:
+            return
+        seen.add(candidate.candidate_id)
+        ranked.append(candidate)
+
+    best = scored[0]
+    add(best.candidate)
+
+    # If confidence is low, prefer stable structural fallbacks before tiny line hunks.
+    strong_reason = any(reason.startswith("task_prefers_") or reason.endswith("_prefers_function_block") for reason in best.reasons)
+    if not strong_reason:
+        for item in scored:
+            label = item.candidate.label
+            if "top_level_function" in label or "module_docstring" in label:
+                add(item.candidate)
+                if len(ranked) >= max_candidates:
+                    return ranked
+
+    for item in scored:
+        add(item.candidate)
+        if len(ranked) >= max_candidates:
+            return ranked
+
+    return ranked
