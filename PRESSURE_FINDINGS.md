@@ -8,9 +8,9 @@
 
 ## What Changed
 
-- The workflow now uses local exact SEARCH candidates.
-- Ollama selects a candidate and provides replacement text instead of inventing SEARCH text.
-- The model no longer owns the most fragile part of the patch.
+- The workflow now scores local exact SEARCH candidates deterministically.
+- Ollama provides replacement text only for the locally selected candidate.
+- The model no longer owns SEARCH generation or candidate ranking.
 
 ## Main Failure Types
 
@@ -21,12 +21,12 @@
 
 ## Read
 
-- The local candidate layer improves control, but it did not yet eliminate `SEARCH=0`.
+- The local scorer improves determinism, but it did not improve the pressure pass rate yet.
 - The remaining failures are still split across syntax and semantic issues.
-- A deterministic local candidate scorer is the next thing to try.
+- The next candidate-ranking improvement should be based on the recorded failure classes.
 
 ## Next Direction
 
 - Tighten local candidate ranking.
-- Keep Ollama on ranking and replacement wording only.
+- Keep Ollama on replacement wording only.
 - Avoid pushing SEARCH generation back to the model.
