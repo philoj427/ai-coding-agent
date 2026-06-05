@@ -201,7 +201,7 @@ def _load_task(root: Path, task_path: Path, workspace_dir: Path, model: str, oll
     if "|" in task_text:
         return TaskSpec.from_text(task_text)
 
-    plan = plan_task(root, task_text, model, ollama_host)
+    plan = plan_task(root, task_text, model, ollama_host, workspace_dir)
     validate_plan(root, plan)
     (workspace_dir / "task_plan.json").write_text(
         json_dumps(plan.to_dict()),

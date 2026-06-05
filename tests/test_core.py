@@ -16,6 +16,7 @@ from ai_coding_agent.patch_applier import apply_search_replace_patch
 from ai_coding_agent.patch_parser import parse_search_replace_patch
 from ai_coding_agent.plan_validator import PlanValidationError, validate_plan
 from ai_coding_agent.planner import plan_task
+from ai_coding_agent.project_index import scan_project
 from ai_coding_agent.task import TaskSpec
 from ai_coding_agent.task_plan import TaskPlan
 from ai_coding_agent.workflow import run_workflow
@@ -94,6 +95,36 @@ class TestCore(unittest.TestCase):
                 plan = plan_task(root, "Help add function get type hints", "model", "host")
             self.assertEqual(plan.target_file, Path("demo_add.py"))
             self.assertEqual(plan.test_type, "unittest")
+
+    def test_project_index_maps_python_symbols_to_tests(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "demo_add.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+            (root / "tests").mkdir()
+            (root / "tests" / "test_demo_add.py").write_text("import unittest\n", encoding="utf-8")
+            index = scan_project(root)
+            demo_file = next(item for item in index.files if item.path == "demo_add.py")
+            self.assertIn("add", demo_file.symbols)
+            self.assertIn("tests/test_demo_add.py", demo_file.tests)
+
+    def test_planner_uses_project_index_for_symbol_match(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "math_tool.py").write_text("def divide(a, b):\n    return a / b\n", encoding="utf-8")
+            (root / "tests").mkdir()
+            (root / "tests" / "test_math_tool.py").write_text("import unittest\n", encoding="utf-8")
+            with mock.patch("ai_coding_agent.planner.generate_patch", side_effect=AssertionError("planner should use index")):
+                plan = plan_task(root, "Add zero guard to divide", "model", "host", root / "workspace")
+            self.assertEqual(plan.target_file, Path("math_tool.py"))
+            self.assertEqual(plan.test_file, Path("tests/test_math_tool.py"))
+
+    def test_planner_fails_closed_when_index_has_no_match(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "demo_add.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+            with mock.patch("ai_coding_agent.planner.generate_patch", side_effect=RuntimeError("offline")):
+                with self.assertRaises(RuntimeError):
+                    plan_task(root, "Refactor unknown payment gateway", "model", "host", root / "workspace")
 
     def test_patch_parse(self):
         patch = "SEARCH\nold\nEND_SEARCH\nREPLACE\nnew\nEND_REPLACE\n"
