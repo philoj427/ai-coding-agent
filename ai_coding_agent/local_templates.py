@@ -195,8 +195,26 @@ def _render_math_tool(description: str) -> str:
     return "\n\n".join(parts) + "\n"
 
 
+def _render_test_math_tool(description: str) -> str:
+    return (
+        "import unittest\n"
+        "\n"
+        "from math_tool import divide\n"
+        "\n"
+        "\n"
+        "class TestMathTool(unittest.TestCase):\n"
+        "    def test_divide(self):\n"
+        "        self.assertEqual(divide(6, 2), 3)\n"
+        "\n"
+        "    def test_divide_by_zero(self):\n"
+        "        with self.assertRaises(ValueError):\n"
+        "            divide(1, 0)\n"
+    )
+
+
 def build_local_template_patch(root: Path, task: TaskSpec) -> str | None:
-    if task.target_file.as_posix() not in {"demo_add.py", "math_tool.py"}:
+    supported_targets = {"demo_add.py", "math_tool.py", "tests/test_math_tool.py"}
+    if task.target_file.as_posix() not in supported_targets:
         return None
     target_path = root / task.target_file
     if not target_path.exists():
@@ -204,8 +222,10 @@ def build_local_template_patch(root: Path, task: TaskSpec) -> str | None:
     original = target_path.read_text(encoding="utf-8")
     if task.target_file.as_posix() == "demo_add.py":
         replacement = _render_demo_add(task.description)
-    else:
+    elif task.target_file.as_posix() == "math_tool.py":
         replacement = _render_math_tool(task.description)
+    else:
+        replacement = _render_test_math_tool(task.description)
     if original == replacement:
         return None
     return _patch(original, replacement)

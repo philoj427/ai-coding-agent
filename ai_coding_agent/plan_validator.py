@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .change_plan import ChangePlan
 from .task_plan import TaskPlan
 
 
@@ -11,6 +12,9 @@ class PlanValidationError(ValueError):
 
 VALID_TEST_TYPES = {"pytest", "unittest", "npm", "none"}
 ALLOWED_RISK_LEVELS = {"low", "medium", "high"}
+ALLOWED_CHANGE_TYPES = {"production_code", "test_code", "documentation"}
+MAX_CHANGE_STEPS = 3
+MAX_CHANGE_FILES = 3
 
 
 def _inside_root(root: Path, path: Path) -> bool:
@@ -49,3 +53,66 @@ def validate_plan(root: Path, plan: TaskPlan) -> None:
 
 def requires_plan_only(plan: TaskPlan) -> bool:
     return plan.risk_level == "high"
+
+
+def _is_protected_path(path: Path) -> bool:
+    normalized = path.as_posix()
+    return normalized in {
+        ".gitignore",
+        "README.md",
+        "ai_coding_agent/git_guard.py",
+        "ai_coding_agent/workflow.py",
+    } or normalized.startswith("ai_coding_agent/")
+
+
+def _is_test_path(path: Path) -> bool:
+    return path.name.startswith("test_") or "tests" in path.parts
+
+
+def validate_change_plan(root: Path, plan: ChangePlan) -> None:
+    if not plan.steps:
+        raise PlanValidationError("change_plan must contain at least one step")
+    if len(plan.steps) > MAX_CHANGE_STEPS:
+        raise PlanValidationError(f"V2.0 supports at most {MAX_CHANGE_STEPS} steps")
+    if len(plan.allowed_files) > MAX_CHANGE_FILES:
+        raise PlanValidationError(f"V2.0 supports at most {MAX_CHANGE_FILES} files")
+    if plan.final_test_type not in VALID_TEST_TYPES:
+        raise PlanValidationError(f"final_test_type is not supported: {plan.final_test_type}")
+    if plan.final_test_file is not None:
+        final_test_path = root / plan.final_test_file
+        if not _inside_root(root, final_test_path):
+            raise PlanValidationError("final_test_file must stay inside repo root")
+        if not final_test_path.exists():
+            raise PlanValidationError(f"final_test_file does not exist: {plan.final_test_file.as_posix()}")
+
+    seen_ids: set[str] = set()
+    for step in plan.steps:
+        if not step.step_id:
+            raise PlanValidationError("step_id must not be empty")
+        if step.step_id in seen_ids:
+            raise PlanValidationError(f"duplicate step_id: {step.step_id}")
+        seen_ids.add(step.step_id)
+
+        target_path = root / step.target_file
+        if not _inside_root(root, target_path):
+            raise PlanValidationError("step target_file must stay inside repo root")
+        if not target_path.exists():
+            raise PlanValidationError(f"step target_file does not exist: {step.target_file.as_posix()}")
+        if not target_path.is_file():
+            raise PlanValidationError(f"step target_file is not a file: {step.target_file.as_posix()}")
+        if _is_protected_path(step.target_file):
+            raise PlanValidationError(f"protected file is not allowed in V2.0 change_plan: {step.target_file.as_posix()}")
+        if step.allowed_change not in ALLOWED_CHANGE_TYPES:
+            raise PlanValidationError(f"allowed_change is not supported: {step.allowed_change}")
+        if step.allowed_change == "test_code" and not _is_test_path(step.target_file):
+            raise PlanValidationError("test_code steps must target a test file")
+        if step.allowed_change == "production_code" and _is_test_path(step.target_file):
+            raise PlanValidationError("production_code steps must not target a test file")
+        if step.test_type not in VALID_TEST_TYPES:
+            raise PlanValidationError(f"step test_type is not supported: {step.test_type}")
+        if step.test_file is not None:
+            test_path = root / step.test_file
+            if not _inside_root(root, test_path):
+                raise PlanValidationError("step test_file must stay inside repo root")
+            if not test_path.exists():
+                raise PlanValidationError(f"step test_file does not exist: {step.test_file.as_posix()}")

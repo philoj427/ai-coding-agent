@@ -228,11 +228,27 @@ def json_dumps(payload: dict[str, object]) -> str:
     return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
-def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, ollama_host: str, dry_run: bool = False) -> int:
+def _resolve_allowed_files(root: Path, paths: set[Path]) -> set[Path]:
+    return {path if path.is_absolute() else root / path for path in paths}
+
+
+def run_workflow(
+    root: Path,
+    task_path: Path,
+    workspace_dir: Path,
+    model: str,
+    ollama_host: str,
+    dry_run: bool = False,
+    base_allowed_files: set[Path] | None = None,
+) -> int:
     workspace_dir.mkdir(parents=True, exist_ok=True)
+    base_allowed_files = base_allowed_files or set()
 
     try:
-        ensure_clean_worktree(root)
+        if base_allowed_files:
+            validate_allowed_changes(root, _resolve_allowed_files(root, base_allowed_files))
+        else:
+            ensure_clean_worktree(root)
         loaded_task = _load_task(root, task_path, workspace_dir, model, ollama_host)
     except (GitGuardError, PlanValidationError, RuntimeError, ValueError) as exc:
         workspace_dir.mkdir(parents=True, exist_ok=True)
@@ -301,7 +317,7 @@ def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, o
             return test_result.exit_code
 
         _cleanup_repo_pycache(root)
-        validate_allowed_changes(root, {target_path})
+        validate_allowed_changes(root, _resolve_allowed_files(root, base_allowed_files) | {target_path})
         diff_text = git_diff(root, target_path)
         (workspace_dir / "git_diff.txt").write_text(diff_text, encoding="utf-8")
         _write_result(
@@ -340,9 +356,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default="qwen2.5-coder:7b")
     parser.add_argument("--ollama-host", default="http://localhost:11434")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--change-plan", default=None, help="Run a V2.0 multi-step change_plan.json.")
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve()
-    task_path = (root / args.task).resolve()
     workspace_dir = (root / args.workspace).resolve()
+    if args.change_plan:
+        from .step_runner import run_change_plan
+
+        return run_change_plan(
+            root=root,
+            plan_path=(root / args.change_plan).resolve(),
+            workspace_dir=workspace_dir,
+            model=args.model,
+            ollama_host=args.ollama_host,
+            dry_run=args.dry_run,
+        )
+    task_path = (root / args.task).resolve()
     return run_workflow(root, task_path, workspace_dir, args.model, args.ollama_host, args.dry_run)

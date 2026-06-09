@@ -9,17 +9,19 @@ from ai_coding_agent.builder import build_prompt
 from ai_coding_agent.builder import _strip_code_fences
 from ai_coding_agent.candidate_selector import parse_candidate_selection, parse_replacement_selection
 from ai_coding_agent.candidate_scorer import rank_candidates, score_candidates
+from ai_coding_agent.change_plan import ChangePlan
 from ai_coding_agent.search_candidates import build_search_candidates
 from ai_coding_agent.gatekeeper import GatekeeperError, inspect_patch
 from ai_coding_agent.git_guard import GitGuardError, ensure_clean_worktree, validate_allowed_changes
 from ai_coding_agent.patch_applier import PatchParseError
 from ai_coding_agent.patch_applier import apply_search_replace_patch
 from ai_coding_agent.patch_parser import parse_search_replace_patch
-from ai_coding_agent.plan_validator import PlanValidationError, validate_plan
+from ai_coding_agent.plan_validator import PlanValidationError, validate_change_plan, validate_plan
 from ai_coding_agent.planner import plan_task
 from ai_coding_agent.project_index import scan_project
 from ai_coding_agent.task import TaskSpec
 from ai_coding_agent.task_plan import TaskPlan
+from ai_coding_agent.step_runner import run_change_plan
 from ai_coding_agent.workflow import run_workflow
 
 
@@ -1015,6 +1017,158 @@ class TestCore(unittest.TestCase):
             self.assertEqual(exit_code, 1)
             result = json.loads((root / "workspace" / "result.json").read_text(encoding="utf-8"))
             self.assertEqual(result["status"], "plan_failed")
+
+    def test_change_plan_parse(self):
+        plan = ChangePlan.from_dict(
+            {
+                "task": "Add divide zero guard and tests",
+                "steps": [
+                    {
+                        "step_id": "S1",
+                        "target_file": "math_tool.py",
+                        "intent": "Add a zero-division guard to divide().",
+                        "allowed_change": "production_code",
+                        "test_type": "unittest",
+                        "test_file": "tests/test_math_tool.py",
+                    }
+                ],
+                "final_test_type": "unittest",
+                "final_test_file": "tests/test_math_tool.py",
+            }
+        )
+        self.assertEqual(plan.steps[0].target_file, Path("math_tool.py"))
+        self.assertEqual(plan.allowed_files, {Path("math_tool.py")})
+
+    def test_validate_change_plan_rejects_protected_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "ai_coding_agent").mkdir()
+            (root / "ai_coding_agent" / "workflow.py").write_text("def run():\n    pass\n", encoding="utf-8")
+            plan = ChangePlan.from_dict(
+                {
+                    "task": "Change protected workflow",
+                    "steps": [
+                        {
+                            "step_id": "S1",
+                            "target_file": "ai_coding_agent/workflow.py",
+                            "intent": "Change workflow",
+                            "allowed_change": "production_code",
+                            "test_type": "none",
+                            "test_file": None,
+                        }
+                    ],
+                    "final_test_type": "none",
+                    "final_test_file": None,
+                }
+            )
+            with self.assertRaises(PlanValidationError):
+                validate_change_plan(root, plan)
+
+    def test_validate_change_plan_rejects_too_many_steps(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            for index in range(4):
+                (root / f"file_{index}.py").write_text("value = 1\n", encoding="utf-8")
+            plan = ChangePlan.from_dict(
+                {
+                    "task": "Too broad",
+                    "steps": [
+                        {
+                            "step_id": f"S{index}",
+                            "target_file": f"file_{index}.py",
+                            "intent": "Change value",
+                            "allowed_change": "production_code",
+                            "test_type": "none",
+                            "test_file": None,
+                        }
+                        for index in range(4)
+                    ],
+                    "final_test_type": "none",
+                    "final_test_file": None,
+                }
+            )
+            with self.assertRaises(PlanValidationError):
+                validate_change_plan(root, plan)
+
+    def test_run_change_plan_applies_source_and_test_steps(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._init_git_repo(root)
+            (root / ".gitignore").write_text("workspace/\n", encoding="utf-8")
+            (root / "math_tool.py").write_text(
+                '"""Small math helpers."""\n'
+                "\n"
+                "def divide(a, b):\n"
+                "    return a / b\n",
+                encoding="utf-8",
+            )
+            (root / "tests").mkdir()
+            (root / "tests" / "test_math_tool.py").write_text(
+                "import unittest\n"
+                "\n"
+                "from math_tool import divide\n"
+                "\n"
+                "\n"
+                "class TestMathTool(unittest.TestCase):\n"
+                "    def test_divide(self):\n"
+                "        self.assertEqual(divide(6, 2), 3)\n",
+                encoding="utf-8",
+            )
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-m", "baseline")
+
+            workspace = root / "workspace"
+            workspace.mkdir()
+            plan_path = workspace / "change_plan.json"
+            plan_path.write_text(
+                json.dumps(
+                    {
+                        "task": "Add divide zero guard and tests",
+                        "steps": [
+                            {
+                                "step_id": "S1",
+                                "target_file": "math_tool.py",
+                                "intent": "Add a zero-division guard to divide().",
+                                "allowed_change": "production_code",
+                                "test_type": "unittest",
+                                "test_file": "tests/test_math_tool.py",
+                            },
+                            {
+                                "step_id": "S2",
+                                "target_file": "tests/test_math_tool.py",
+                                "intent": "Add a test for divide by zero.",
+                                "allowed_change": "test_code",
+                                "test_type": "unittest",
+                                "test_file": "tests/test_math_tool.py",
+                            },
+                        ],
+                        "final_test_type": "unittest",
+                        "final_test_file": "tests/test_math_tool.py",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            exit_code = run_change_plan(
+                root=root,
+                plan_path=plan_path,
+                workspace_dir=workspace,
+                model="qwen2.5-coder:7b",
+                ollama_host="http://localhost:11434",
+            )
+
+            debug_report = ""
+            if (workspace / "result.json").exists():
+                debug_report += (workspace / "result.json").read_text(encoding="utf-8")
+            if (workspace / "test_result.txt").exists():
+                debug_report += "\n" + (workspace / "test_result.txt").read_text(encoding="utf-8")
+            self.assertEqual(exit_code, 0, debug_report)
+            result = json.loads((workspace / "result.json").read_text(encoding="utf-8"))
+            self.assertEqual(result["status"], "change_plan_applied")
+            self.assertIn("raise ValueError", (root / "math_tool.py").read_text(encoding="utf-8"))
+            self.assertIn("test_divide_by_zero", (root / "tests" / "test_math_tool.py").read_text(encoding="utf-8"))
+            self.assertIn("math_tool.py", (workspace / "git_diff.txt").read_text(encoding="utf-8"))
+            self.assertIn("tests/test_math_tool.py", (workspace / "git_diff.txt").read_text(encoding="utf-8"))
 
     def _init_git_repo(self, root: Path) -> None:
         self._git(root, "init")

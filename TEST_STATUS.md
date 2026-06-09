@@ -7,7 +7,8 @@
 - V1.7 planner can turn a natural-language task into `task_plan.json`.
 - V1.8 project index maps symbols to target files and related tests.
 - V1.9 high-risk tasks produce plan-only results instead of patching code.
-- Latest unit test suite result: 49 tests passed.
+- V2.0 safe change plans run multiple single-file steps under the existing safety workflow.
+- Latest unit test suite result: 53 tests passed.
 
 ## Latest Automated Workflow Attempt
 
@@ -32,6 +33,14 @@
 ## Latest Failure Pattern
 
 - No failures in the latest V1.9 50-task pressure run.
+- No failures in the latest V2.0 unit validation.
+
+## Latest V2.0 Validation
+
+- Run: `python -m unittest discover -s tests`
+- Result: 53 tests passed
+- Coverage: real two-step source + test change plan against `math_tool.py` and `tests/test_math_tool.py`
+- Safety check: final-test `__pycache__` artifacts are cleaned before plan-level Git Guard
 
 ## Safety Coverage
 
@@ -45,6 +54,8 @@
 - V1.7 plans are validated before patch workflow starts
 - V1.8 project index respects protected files from `memory/PROTECTED_FILES.md`
 - V1.9 plan-only mode prevents protected or high-risk plans from entering patch generation
+- V2.0 change plans validate max steps, max files, protected files, step IDs, allowed change types, and test/prod file separation
+- V2.0 plan-level Git Guard validates the final repo diff against the full change plan allowed files
 
 ## Notes
 
@@ -54,3 +65,4 @@
 - V1.7 still enforces a single target file.
 - V1.8 still enforces a single target file.
 - V1.9 still enforces a single target file.
+- V2.0 permits multiple files only as bounded single-file steps, not as one free-form multi-file patch.
