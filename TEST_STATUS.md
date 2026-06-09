@@ -34,6 +34,7 @@
 
 - No failures in the latest V1.9 50-task pressure run.
 - No failures in the latest V2.0 unit validation.
+- No failures in the latest V2.0 mixed 50-case pressure run.
 
 ## Latest V2.0 Validation
 
@@ -41,6 +42,17 @@
 - Result: 53 tests passed
 - Coverage: real two-step source + test change plan against `math_tool.py` and `tests/test_math_tool.py`
 - Safety check: final-test `__pycache__` artifacts are cleaned before plan-level Git Guard
+
+## Latest V2.0 Pressure Run
+
+- Run: `python .\run_pressure_v20.py`
+- Result: 50 cases passed, 0 failed
+- `PASS_PATCH`: 30
+- `PASS_CHANGE_PLAN`: 10
+- `PASS_PLAN_ONLY`: 5
+- `PASS_REJECT`: 4
+- `PASS_ROLLBACK`: 1
+- `FAIL`: 0
 
 ## Safety Coverage
 
