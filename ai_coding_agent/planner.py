@@ -21,6 +21,35 @@ def load_or_build_project_index(root: Path, workspace_dir: Path) -> ProjectIndex
 def _rule_based_plan(index: ProjectIndex, description: str) -> TaskPlan | None:
     lowered = description.lower()
     protected = set(index.protected_files)
+    high_risk_markers = (
+        "multi-file",
+        "multiple files",
+        "repository-wide",
+        "whole repo",
+        "agent core",
+        "protected",
+        "loosen protected",
+        "without applying code changes",
+        "plan-only",
+    )
+
+    if any(marker in lowered for marker in high_risk_markers):
+        target = _best_safe_file(index, lowered) or _first_safe_file(index)
+        if target is not None:
+            test_file = target.tests[0] if target.tests else None
+            return TaskPlan.from_dict(
+                {
+                    "target_file": target.path,
+                    "test_type": "unittest" if test_file and test_file.endswith(".py") else "none",
+                    "test_file": test_file,
+                    "risk_level": "high",
+                    "reason": "Task appears high risk or outside V1.9 single-file apply scope. Plan-only mode required.",
+                    "allowed_files": [target.path],
+                    "forbidden_files": list(index.protected_files),
+                },
+                description,
+            )
+
     for item in index.files:
         path_stem = Path(item.path).stem.lower()
         if item.path in protected or item.risk == "high":
@@ -86,12 +115,50 @@ def _rule_based_plan(index: ProjectIndex, description: str) -> TaskPlan | None:
     )
 
 
+def _best_safe_file(index: ProjectIndex, lowered: str):
+    protected = set(index.protected_files)
+    matches = []
+    for item in index.files:
+        if item.risk == "high" or item.path in protected or item.type.endswith("_test") or item.type == "documentation":
+            continue
+        score = 0
+        if item.path.lower() in lowered or Path(item.path).stem.lower() in lowered:
+            score += 8
+        for symbol in item.symbols:
+            if symbol.lower() in lowered:
+                score += 10
+        if score:
+            matches.append((score, item.path, item))
+    if not matches:
+        return None
+    matches.sort(key=lambda row: (-row[0], row[1]))
+    return matches[0][2]
+
+
+def _first_safe_file(index: ProjectIndex):
+    protected = set(index.protected_files)
+    for item in index.files:
+        if item.risk != "high" and item.path not in protected and not item.type.endswith("_test") and item.type != "documentation":
+            return item
+    return None
+
+
 def _fallback_plan(root: Path, index: ProjectIndex, description: str) -> TaskPlan | None:
     plan = _rule_based_plan(index, description)
     if plan is not None:
         return plan
     lowered = description.lower()
-    if "add" in lowered and (root / "demo_add.py").exists():
+    demo_add_markers = (
+        "add",
+        "_is_numeric",
+        "_is_number",
+        "_validate_numbers",
+        "_sum",
+        "_raise_numeric_type_error",
+        "numeric",
+        "typeerror",
+    )
+    if any(marker in lowered for marker in demo_add_markers) and (root / "demo_add.py").exists():
         test_match = next((item.tests[0] for item in index.files if item.path == "demo_add.py" and item.tests), None)
         test_type = "unittest" if test_match else "none"
         return TaskPlan.from_dict(

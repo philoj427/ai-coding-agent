@@ -304,6 +304,15 @@ def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, o
         validate_allowed_changes(root, {target_path})
         diff_text = git_diff(root, target_path)
         (workspace_dir / "git_diff.txt").write_text(diff_text, encoding="utf-8")
+        _write_result(
+            workspace_dir,
+            {
+                "status": "patch_applied",
+                "target_file": task.target_file.as_posix(),
+                "test_type": task.test_type,
+                "test_file": task.test_file.as_posix() if task.test_file else None,
+            },
+        )
         return 0
     except (GitGuardError, GatekeeperError, PatchParseError, PlanValidationError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
         try:

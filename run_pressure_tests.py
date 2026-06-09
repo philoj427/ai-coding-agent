@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 from pathlib import Path
 
@@ -59,6 +60,28 @@ def parse_failure_report(text: str) -> tuple[str, str]:
     return stage, reason
 
 
+def read_result_status(result_path: Path) -> str:
+    if not result_path.exists():
+        return ""
+    try:
+        payload = json.loads(result_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return ""
+    return str(payload.get("status", ""))
+
+
+def classify_task(exit_code: int, diff_text: str, result_status: str) -> str:
+    if exit_code != 0:
+        if result_status == "plan_failed":
+            return "FAIL_PLAN"
+        return "FAIL"
+    if result_status == "plan_only":
+        return "PASS_PLAN_ONLY"
+    if diff_text.strip():
+        return "PASS_PATCH"
+    return "PASS_NO_DIFF"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run pressure tasks.")
     parser.add_argument("--tasks", default="pressure_tasks.txt", help="Task list file to run.")
@@ -80,6 +103,10 @@ def main(argv: list[str] | None = None) -> int:
 
     pass_count = 0
     fail_count = 0
+    patch_count = 0
+    plan_only_count = 0
+    no_diff_count = 0
+    plan_fail_count = 0
 
     for index, task in enumerate(tasks, start=1):
         task_dir = RESULTS_DIR / f"task_{index:02d}"
@@ -93,6 +120,8 @@ def main(argv: list[str] | None = None) -> int:
         test_result_path = WORKSPACE / "test_result.txt"
         git_diff_path = WORKSPACE / "git_diff.txt"
         patch_path = WORKSPACE / "search_replace.patch"
+        result_path = WORKSPACE / "result.json"
+        task_plan_path = WORKSPACE / "task_plan.json"
 
         if test_result_path.exists():
             (task_dir / "test_result.txt").write_text(test_result_path.read_text(encoding="utf-8"), encoding="utf-8")
@@ -100,17 +129,33 @@ def main(argv: list[str] | None = None) -> int:
             (task_dir / "git_diff.txt").write_text(git_diff_path.read_text(encoding="utf-8"), encoding="utf-8")
         if patch_path.exists():
             (task_dir / "search_replace.patch").write_text(patch_path.read_text(encoding="utf-8"), encoding="utf-8")
+        if result_path.exists():
+            (task_dir / "result.json").write_text(result_path.read_text(encoding="utf-8"), encoding="utf-8")
+        if task_plan_path.exists():
+            (task_dir / "task_plan.json").write_text(task_plan_path.read_text(encoding="utf-8"), encoding="utf-8")
+        (task_dir / "stdout.txt").write_text(proc.stdout or "", encoding="utf-8")
+        (task_dir / "stderr.txt").write_text(proc.stderr or "", encoding="utf-8")
 
         stage = ""
         reason = ""
         if test_result_path.exists():
             stage, reason = parse_failure_report(test_result_path.read_text(encoding="utf-8"))
 
-        status = "PASS" if exit_code == 0 else "FAIL"
-        if status == "PASS":
+        diff_text = git_diff_path.read_text(encoding="utf-8") if git_diff_path.exists() else ""
+        result_status = read_result_status(result_path)
+        status = classify_task(exit_code, diff_text, result_status)
+        if status.startswith("PASS"):
             pass_count += 1
         else:
             fail_count += 1
+        if status == "PASS_PATCH":
+            patch_count += 1
+        elif status == "PASS_PLAN_ONLY":
+            plan_only_count += 1
+        elif status == "PASS_NO_DIFF":
+            no_diff_count += 1
+        elif status == "FAIL_PLAN":
+            plan_fail_count += 1
 
         report_lines.extend(
             [
@@ -121,6 +166,12 @@ def main(argv: list[str] | None = None) -> int:
                 f"- Task: {task}",
             ]
         )
+        if result_status:
+            report_lines.append(f"- Result status: {result_status}")
+        if diff_text.strip():
+            report_lines.append("- Code diff: yes")
+        else:
+            report_lines.append("- Code diff: no")
         if stage:
             report_lines.append(f"- Stage: {stage}")
         if reason:
@@ -131,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
         report_lines.append("")
 
         if args.sequence:
-            if status == "PASS":
+            if status.startswith("PASS"):
                 checkpoint(index)
             else:
                 reset_repo()
@@ -144,6 +195,10 @@ def main(argv: list[str] | None = None) -> int:
             "",
             f"- Passed: {pass_count}",
             f"- Failed: {fail_count}",
+            f"- Real patch passes: {patch_count}",
+            f"- Plan-only passes: {plan_only_count}",
+            f"- No-diff passes: {no_diff_count}",
+            f"- Planner failures: {plan_fail_count}",
             "",
         ]
     )

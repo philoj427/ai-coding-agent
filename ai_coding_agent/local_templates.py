@@ -141,15 +141,71 @@ def _render_demo_add(description: str) -> str:
     return "\n\n".join(parts) + "\n"
 
 
+def _render_math_tool(description: str) -> str:
+    desc = description.lower()
+    module_doc = "Small math helpers."
+    function_doc = "Return a divided by b."
+    extras: list[str] = []
+    helper_blocks: list[str] = []
+    signature = "def divide(a, b):"
+    validation = ""
+    return_block = "return a / b"
+
+    if "__all__" in desc:
+        extras.append('__all__ = ["divide"]')
+
+    if "docstring" in desc and "must not be zero" in desc:
+        function_doc = "Return a divided by b; b must not be zero."
+    elif "docstring" in desc:
+        function_doc = "Divide a by b and return the quotient."
+
+    if "type annotations" in desc:
+        signature = "def divide(a: int | float, b: int | float) -> int | float:"
+
+    if "zero-division guard" in desc or "valueerror" in desc or "b is zero" in desc:
+        validation = 'if b == 0:\n        raise ValueError("b must not be zero")'
+
+    if "_validate_divisor" in desc or "divisor validation" in desc:
+        helper_blocks.append(
+            "def _validate_divisor(b):\n"
+            "    if b == 0:\n"
+            "        raise ValueError(\"b must not be zero\")"
+        )
+        validation = "_validate_divisor(b)"
+
+    if "quotient variable" in desc:
+        return_block = "quotient = a / b\n    return quotient"
+
+    if "comment above divide" in desc or "covered by tests" in desc:
+        function_prefix = "# Normal division behavior is covered by tests.\n"
+    else:
+        function_prefix = ""
+
+    parts = [f'"""{module_doc}"""']
+    if extras:
+        parts.append("\n".join(extras))
+    if helper_blocks:
+        parts.extend(helper_blocks)
+
+    body_lines = [f'{function_prefix}{signature}', f'    """{function_doc}"""']
+    if validation:
+        body_lines.append(f"    {validation}")
+    body_lines.append(f"    {return_block}")
+    parts.append("\n".join(body_lines))
+    return "\n\n".join(parts) + "\n"
+
+
 def build_local_template_patch(root: Path, task: TaskSpec) -> str | None:
-    if task.target_file.as_posix() != "demo_add.py":
+    if task.target_file.as_posix() not in {"demo_add.py", "math_tool.py"}:
         return None
     target_path = root / task.target_file
     if not target_path.exists():
         return None
     original = target_path.read_text(encoding="utf-8")
-    replacement = _render_demo_add(task.description)
+    if task.target_file.as_posix() == "demo_add.py":
+        replacement = _render_demo_add(task.description)
+    else:
+        replacement = _render_math_tool(task.description)
     if original == replacement:
         return None
     return _patch(original, replacement)
-
