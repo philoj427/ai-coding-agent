@@ -6,16 +6,15 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
-TASKS_PATH = ROOT / "pressure_tasks.txt"
 WORKSPACE = ROOT / "workspace"
 TASK_FILE = WORKSPACE / "task.txt"
 RESULTS_DIR = WORKSPACE / "pressure_results"
 REPORT_PATH = WORKSPACE / "pressure_test_report.md"
 
 
-def read_tasks() -> list[str]:
+def read_tasks(tasks_path: Path) -> list[str]:
     tasks: list[str] = []
-    for raw_line in TASKS_PATH.read_text(encoding="utf-8").splitlines():
+    for raw_line in tasks_path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#"):
             continue
@@ -62,17 +61,20 @@ def parse_failure_report(text: str) -> tuple[str, str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run pressure tasks.")
+    parser.add_argument("--tasks", default="pressure_tasks.txt", help="Task list file to run.")
     parser.add_argument("--sequence", action="store_true", help="Keep successful task changes as temporary checkpoints.")
     args = parser.parse_args(argv)
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    tasks = read_tasks()
+    tasks_path = (ROOT / args.tasks).resolve()
+    tasks = read_tasks(tasks_path)
     original_head = git_stdout(["rev-parse", "HEAD"])
 
     report_lines = [
         "# Pressure Test Report",
         "",
         f"Total tasks: {len(tasks)}",
+        f"Tasks file: {tasks_path.relative_to(ROOT).as_posix()}",
         "",
     ]
 

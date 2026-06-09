@@ -21,6 +21,22 @@ def load_or_build_project_index(root: Path, workspace_dir: Path) -> ProjectIndex
 def _rule_based_plan(index: ProjectIndex, description: str) -> TaskPlan | None:
     lowered = description.lower()
     protected = set(index.protected_files)
+    for item in index.files:
+        path_stem = Path(item.path).stem.lower()
+        if item.path in protected or item.risk == "high":
+            if item.path.lower() in lowered or path_stem in lowered:
+                return TaskPlan.from_dict(
+                    {
+                        "target_file": item.path,
+                        "test_type": "none",
+                        "test_file": None,
+                        "risk_level": "high",
+                        "reason": f"Task targets protected or high-risk file {item.path}. Plan-only mode required.",
+                        "allowed_files": [item.path],
+                        "forbidden_files": list(index.protected_files),
+                    },
+                    description,
+                )
     candidates = [
         item
         for item in index.files

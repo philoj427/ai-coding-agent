@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from .builder import build_prompt, generate_patch
@@ -15,7 +16,7 @@ from .git_guard import GitGuardError, ensure_clean_worktree, git_diff, restore_c
 from .local_templates import build_local_template_patch
 from .patch_applier import PatchParseError, apply_search_replace_patch
 from .patch_parser import parse_search_replace_patch
-from .plan_validator import PlanValidationError, validate_plan
+from .plan_validator import PlanValidationError, requires_plan_only, validate_plan
 from .planner import plan_task
 from .search_candidates import SearchCandidate, build_search_candidates
 from .task import TaskSpec
@@ -44,6 +45,10 @@ def _write_failure_report(workspace_dir: Path, *, stage: str, reason: str, detai
     if details:
         lines.extend(["", details.rstrip("\n")])
     (workspace_dir / "test_result.txt").write_text("\n".join(lines).rstrip("\n") + "\n", encoding="utf-8")
+
+
+def _write_result(workspace_dir: Path, payload: dict[str, object]) -> None:
+    (workspace_dir / "result.json").write_text(json_dumps(payload), encoding="utf-8")
 
 
 def _py_compile_target(target_path: Path) -> None:
@@ -196,10 +201,17 @@ def _failure_details_for_patch_error(exc: Exception) -> str | None:
     return None
 
 
-def _load_task(root: Path, task_path: Path, workspace_dir: Path, model: str, ollama_host: str) -> TaskSpec:
+@dataclass(frozen=True)
+class LoadedTask:
+    task: TaskSpec
+    plan_only: bool
+    plan_reason: str
+
+
+def _load_task(root: Path, task_path: Path, workspace_dir: Path, model: str, ollama_host: str) -> LoadedTask:
     task_text = task_path.read_text(encoding="utf-8").strip()
     if "|" in task_text:
-        return TaskSpec.from_text(task_text)
+        return LoadedTask(TaskSpec.from_text(task_text), False, "")
 
     plan = plan_task(root, task_text, model, ollama_host, workspace_dir)
     validate_plan(root, plan)
@@ -207,7 +219,7 @@ def _load_task(root: Path, task_path: Path, workspace_dir: Path, model: str, oll
         json_dumps(plan.to_dict()),
         encoding="utf-8",
     )
-    return plan.to_task_spec()
+    return LoadedTask(plan.to_task_spec(), requires_plan_only(plan), plan.reason)
 
 
 def json_dumps(payload: dict[str, object]) -> str:
@@ -219,8 +231,32 @@ def json_dumps(payload: dict[str, object]) -> str:
 def run_workflow(root: Path, task_path: Path, workspace_dir: Path, model: str, ollama_host: str, dry_run: bool = False) -> int:
     workspace_dir.mkdir(parents=True, exist_ok=True)
 
-    ensure_clean_worktree(root)
-    task = _load_task(root, task_path, workspace_dir, model, ollama_host)
+    try:
+        ensure_clean_worktree(root)
+        loaded_task = _load_task(root, task_path, workspace_dir, model, ollama_host)
+    except (GitGuardError, PlanValidationError, RuntimeError, ValueError) as exc:
+        workspace_dir.mkdir(parents=True, exist_ok=True)
+        _write_failure_report(workspace_dir, stage="planner", reason=str(exc))
+        _write_result(workspace_dir, {"status": "plan_failed", "reason": str(exc)})
+        (workspace_dir / "git_diff.txt").write_text("", encoding="utf-8")
+        return 1
+
+    task = loaded_task.task
+
+    if loaded_task.plan_only:
+        _write_result(
+            workspace_dir,
+            {
+                "status": "plan_only",
+                "reason": loaded_task.plan_reason,
+                "target_file": task.target_file.as_posix(),
+                "test_type": task.test_type,
+                "test_file": task.test_file.as_posix() if task.test_file else None,
+            },
+        )
+        (workspace_dir / "test_result.txt").write_text("Plan-only mode: no code changes applied.\n", encoding="utf-8")
+        (workspace_dir / "git_diff.txt").write_text("", encoding="utf-8")
+        return 0
 
     context_path = build_context_pack(root, task, workspace_dir)
     context_text = context_path.read_text(encoding="utf-8")

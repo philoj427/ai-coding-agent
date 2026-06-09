@@ -1,3 +1,4 @@
+import json
 import tempfile
 from pathlib import Path
 import unittest
@@ -125,6 +126,15 @@ class TestCore(unittest.TestCase):
             with mock.patch("ai_coding_agent.planner.generate_patch", side_effect=RuntimeError("offline")):
                 with self.assertRaises(RuntimeError):
                     plan_task(root, "Refactor unknown payment gateway", "model", "host", root / "workspace")
+
+    def test_planner_marks_protected_file_as_high_risk(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "ai_coding_agent").mkdir()
+            (root / "ai_coding_agent" / "workflow.py").write_text("def run():\n    pass\n", encoding="utf-8")
+            plan = plan_task(root, "Refactor ai_coding_agent/workflow.py", "model", "host", root / "workspace")
+            self.assertEqual(plan.target_file, Path("ai_coding_agent/workflow.py"))
+            self.assertEqual(plan.risk_level, "high")
 
     def test_patch_parse(self):
         patch = "SEARCH\nold\nEND_SEARCH\nREPLACE\nnew\nEND_REPLACE\n"
@@ -953,6 +963,58 @@ class TestCore(unittest.TestCase):
             self.assertEqual(exit_code, 0, report)
             self.assertTrue((root / "workspace" / "task_plan.json").exists())
             self.assertIn("A concise numeric addition helper", target.read_text(encoding="utf-8"))
+
+    def test_run_workflow_plan_only_for_high_risk_plan(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._init_git_repo(root)
+            (root / ".gitignore").write_text("workspace/\n", encoding="utf-8")
+            (root / "ai_coding_agent").mkdir()
+            protected = root / "ai_coding_agent" / "workflow.py"
+            protected.write_text("def run():\n    pass\n", encoding="utf-8")
+            task_file = root / "task.txt"
+            task_file.write_text("Refactor ai_coding_agent/workflow.py\n", encoding="utf-8")
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-m", "baseline")
+
+            exit_code = run_workflow(
+                root=root,
+                task_path=task_file,
+                workspace_dir=root / "workspace",
+                model="qwen2.5-coder:7b",
+                ollama_host="http://localhost:11434",
+                dry_run=False,
+            )
+
+            self.assertEqual(exit_code, 0)
+            result = json.loads((root / "workspace" / "result.json").read_text(encoding="utf-8"))
+            self.assertEqual(result["status"], "plan_only")
+            self.assertEqual(protected.read_text(encoding="utf-8"), "def run():\n    pass\n")
+
+    def test_run_workflow_writes_plan_failed_for_unknown_task(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self._init_git_repo(root)
+            (root / ".gitignore").write_text("workspace/\n", encoding="utf-8")
+            (root / "demo_add.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+            task_file = root / "task.txt"
+            task_file.write_text("Refactor unknown payment gateway\n", encoding="utf-8")
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-m", "baseline")
+
+            with mock.patch("ai_coding_agent.planner.generate_patch", side_effect=RuntimeError("offline")):
+                exit_code = run_workflow(
+                    root=root,
+                    task_path=task_file,
+                    workspace_dir=root / "workspace",
+                    model="qwen2.5-coder:7b",
+                    ollama_host="http://localhost:11434",
+                    dry_run=False,
+                )
+
+            self.assertEqual(exit_code, 1)
+            result = json.loads((root / "workspace" / "result.json").read_text(encoding="utf-8"))
+            self.assertEqual(result["status"], "plan_failed")
 
     def _init_git_repo(self, root: Path) -> None:
         self._git(root, "init")

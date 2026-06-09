@@ -1,0 +1,53 @@
+# V1.9 pressure tasks: Project Index + Plan-only mode
+# Difficulty increases from simple indexed symbol edits to high-risk plan-only tasks.
+
+Rewrite the module docstring for the add helper in a concise style while keeping behavior unchanged.
+Update add() function docstring to mention non-numeric inputs raise TypeError.
+Add a short comment above add() validation explaining both inputs must be numeric.
+Add a short comment above add() return statement explaining it returns the computed sum.
+Introduce a local variable named total inside add() and return it.
+Rename the local total variable in add() to result.
+Change the TypeError message in add() to be shorter and direct.
+Split add() validation across multiple readable lines.
+Rewrite add() validation using all(...) over the two inputs.
+Refactor add() to assign validation result to a variable before raising TypeError.
+Add a module-level NUMERIC_TYPES constant for add() validation.
+Update add() validation to use NUMERIC_TYPES.
+Add a module-level DEFAULT_NUMERIC_TYPES constant and use it in add().
+Introduce a Numeric type alias and use it in add() signature.
+Add a module-level __all__ declaration that exports add.
+Add a module-level __version__ string.
+Extract add() numeric check into _is_numeric(value).
+Update add() to call _is_numeric() for both arguments.
+Rename _is_numeric(value) to _is_number(value).
+Extract add() validation into _validate_numbers(a, b).
+Add a docstring to _validate_numbers().
+Add type annotations to _validate_numbers().
+Move add() validation into _validate_numbers() and call it from add().
+Extract add() addition expression into _sum(a, b).
+Call _sum(a, b) from add().
+Add a docstring to _sum().
+Add type annotations to _sum().
+Introduce _raise_numeric_type_error() and call it from add().
+Make _raise_numeric_type_error() raise the existing TypeError message.
+Replace inline add() validation with a bool-returning helper.
+Update add() to call the bool-returning helper and raise TypeError when it returns False.
+幫 divide 函數加 0 防呆。
+Add a docstring to divide() explaining it divides a by b.
+Add type annotations to divide().
+Change divide() to raise ValueError when b is zero.
+Introduce a local quotient variable in divide() and return it.
+Add a module-level __all__ declaration that exports divide.
+Add tests mapping awareness for divide without modifying test files.
+Ask planner to identify where divide is implemented and produce a low-risk single-file plan.
+Ask planner to identify tests related to divide and keep the change single-file.
+Refactor unknown payment gateway behavior without naming a symbol or file.
+Modify README.md to document the whole planner workflow.
+Refactor ai_coding_agent/workflow.py to support multi-file editing.
+Change ai_coding_agent/git_guard.py to loosen protected-file checks.
+Update .gitignore to stop ignoring workspace.
+Plan a multi-file change touching demo_add.py and tests/test_demo_add.py.
+Plan a repository-wide rename from add to add_numbers.
+Plan a feature that needs both math_tool.py and demo_add.py to change.
+Plan a risky refactor of the agent core without applying code changes.
+Ask planner for a plan-only analysis of protected workflow changes.

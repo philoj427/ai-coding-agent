@@ -10,7 +10,7 @@ class PlanValidationError(ValueError):
 
 
 VALID_TEST_TYPES = {"pytest", "unittest", "npm", "none"}
-ALLOWED_RISK_LEVELS = {"low", "medium"}
+ALLOWED_RISK_LEVELS = {"low", "medium", "high"}
 
 
 def _inside_root(root: Path, path: Path) -> bool:
@@ -42,7 +42,10 @@ def validate_plan(root: Path, plan: TaskPlan) -> None:
     if plan.target_file not in plan.allowed_files:
         raise PlanValidationError("target_file must be listed in allowed_files")
     if len(plan.allowed_files) != 1:
-        raise PlanValidationError("V1.7 supports exactly one allowed file")
+        raise PlanValidationError("V1.9 supports exactly one allowed file")
     if plan.risk_level not in ALLOWED_RISK_LEVELS:
-        raise PlanValidationError(f"risk_level requires manual review: {plan.risk_level}")
+        raise PlanValidationError(f"risk_level is not supported: {plan.risk_level}")
 
+
+def requires_plan_only(plan: TaskPlan) -> bool:
+    return plan.risk_level == "high"
