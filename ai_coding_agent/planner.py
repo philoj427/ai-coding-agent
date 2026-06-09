@@ -206,7 +206,14 @@ def _extract_json(text: str) -> str:
     raise ValueError("Planner response did not contain a JSON object")
 
 
+def _is_ambiguous_without_target(description: str) -> bool:
+    lowered = description.lower()
+    return "unknown" in lowered or "without naming" in lowered
+
+
 def plan_task(root: Path, description: str, model: str, ollama_host: str, workspace_dir: Path | None = None) -> TaskPlan:
+    if _is_ambiguous_without_target(description):
+        raise RuntimeError("Planner could not identify a concrete target file")
     workspace = workspace_dir if workspace_dir is not None else root / "workspace"
     index = load_or_build_project_index(root, workspace)
     fallback = _fallback_plan(root, index, description)

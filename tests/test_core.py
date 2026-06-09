@@ -129,6 +129,15 @@ class TestCore(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     plan_task(root, "Refactor unknown payment gateway", "model", "host", root / "workspace")
 
+    def test_planner_does_not_ask_ollama_for_ambiguous_unknown_task(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "demo_add.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+            with mock.patch("ai_coding_agent.planner.generate_patch") as generate_patch:
+                with self.assertRaises(RuntimeError):
+                    plan_task(root, "Refactor unknown payment gateway without naming a symbol or file", "model", "host", root / "workspace")
+            generate_patch.assert_not_called()
+
     def test_planner_marks_protected_file_as_high_risk(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
