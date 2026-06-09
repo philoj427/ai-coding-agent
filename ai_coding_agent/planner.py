@@ -24,6 +24,7 @@ def _rule_based_plan(index: ProjectIndex, description: str) -> TaskPlan | None:
     high_risk_markers = (
         "multi-file",
         "multiple files",
+        "needs both",
         "repository-wide",
         "whole repo",
         "agent core",
