@@ -8,7 +8,7 @@
 - V1.8 project index maps symbols to target files and related tests.
 - V1.9 high-risk tasks produce plan-only results instead of patching code.
 - V2.0 safe change plans run multiple single-file steps under the existing safety workflow.
-- Latest unit test suite result: 53 tests passed.
+- Latest unit test suite result: 66 tests passed.
 
 ## Latest Automated Workflow Attempt
 
@@ -46,13 +46,14 @@
 ## Latest V2.0 Pressure Run
 
 - Run: `python .\run_pressure_v20.py`
-- Result: 75 cases passed, 0 failed
-- `PASS_PATCH`: 30
+- Result: 100 cases passed, 0 failed
+- `PASS_PATCH`: 55
 - `PASS_CHANGE_PLAN`: 18
 - `PASS_PLAN_ONLY`: 9
 - `PASS_REJECT`: 13
 - `PASS_ROLLBACK`: 5
 - `FAIL`: 0
+- General programming coverage: phone normalization, log parsing, slug generation, query parsing, coupon logic, invoice totals, record merging, config defaults, CSV output, grouping, state transitions, and rate limiting
 
 ## Safety Coverage
 

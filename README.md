@@ -45,9 +45,10 @@ Optional flags:
 
 - Latest V1.9 50-task pressure run: `50 passed, 0 failed`
 - Pressure run classification: 40 real code patch passes, 10 plan-only safety passes, 0 no-diff passes
-- Latest V2.0 mixed pressure run: 75 cases passed, 0 failed
-- V2.0 pressure classification: 30 single-file patch passes, 18 change-plan passes, 9 plan-only passes, 13 reject passes, 5 rollback passes
-- Latest validation: `python -m unittest discover -s tests` passed with 54 tests
+- Latest V2.0 mixed pressure run: 100 cases passed, 0 failed
+- V2.0 pressure classification: 55 single-file patch passes, 18 change-plan passes, 9 plan-only passes, 13 reject passes, 5 rollback passes
+- Latest validation: `python -m unittest discover -s tests` passed with 66 tests
+- General programming benchmark coverage includes string parsing, data transforms, coupon/invoice logic, config loading, CSV output, state transitions, and rate limiting
 - V1.8 Project Index lets Planner map symbols to target and test files
 - V1.9 adds plan-only output for high-risk tasks
 - V2.0 adds safe multi-step change plans for small source + test changes
