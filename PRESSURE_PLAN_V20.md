@@ -81,7 +81,7 @@ The executable runner extends the base 50 cases with 25 harder cases:
 | 41-48 | change-plan | Additional three-step source/test plans that verify prior step preservation across multiple patches. | `PASS_CHANGE_PLAN` |
 | 49-57 | plan-only | Protected workflow, protected ignore-file, multi-file, and whole-repo cleanup requests that must not patch code. | `PASS_PLAN_ONLY` |
 | 58-69 | reject | Missing targets, duplicate step IDs, empty step IDs, unsupported change types, unsupported test types, and prod/test file separation violations. | `PASS_REJECT` |
-| 70-74 | rollback | Valid early source/test steps followed by final-test or no-op failures; repo must restore to `HEAD`. | `PASS_ROLLBACK` |
+| 70-74 | rollback | Valid early source/test steps followed by final-test failures; repo must restore to `HEAD`. | `PASS_ROLLBACK` |
 | 75 | fail-closed | Unknown task with no target file or symbol should fail closed without patching. | `PASS_REJECT` |
 
 ## Notes

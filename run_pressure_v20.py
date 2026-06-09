@@ -166,7 +166,7 @@ def _cases() -> list[PressureCase]:
     rollback_plans = [
         _change_plan("Rollback after valid step then invalid final test", [_source_step("S1", "Add a zero-division guard to divide().")], final_test_type="npm"),
         _change_plan("Rollback after valid two-step plan then invalid final test", [_source_step("S1", "Add a zero-division guard to divide()."), _test_step("S2", "Add a test for divide by zero.")], final_test_type="npm"),
-        _change_plan("Rollback after valid source then no-op source step", [_source_step("S1", "Add a zero-division guard to divide()."), _source_step("S2", "Add a zero-division guard to divide().")]),
+        _change_plan("Rollback after two valid source steps then invalid final test", [_source_step("S1", "Add type annotations and a zero-division guard to divide()."), _source_step("S2", "Introduce a local quotient variable in divide() and return it.")], final_test_type="npm"),
         _change_plan("Rollback after source change then unsupported final npm test", [_source_step("S1", "Add type annotations and a zero-division guard to divide().")], final_test_type="npm"),
         _change_plan("Rollback after helper extraction then invalid final npm test", [_source_step("S1", "Extract divide() divisor validation into _validate_divisor(b) and call it from divide().")], final_test_type="npm"),
     ]
