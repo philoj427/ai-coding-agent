@@ -108,16 +108,34 @@ def _cases() -> list[PressureCase]:
         PressureCase(f"change-plan {index:02d}", "change_plan", "PASS_CHANGE_PLAN", plan)
         for index, plan in enumerate(change_plans, start=31)
     )
+    advanced_change_plans = [
+        _change_plan("Advanced guard helper export and zero test", [_source_step("S1", "Extract divide() divisor validation into _validate_divisor(b) and call it from divide()."), _source_step("S2", "Add a module-level __all__ declaration that exports divide."), _test_step("S3", "Add a test for divide by zero.")]),
+        _change_plan("Advanced type docstring quotient", [_source_step("S1", "Add type annotations and a zero-division guard to divide()."), _source_step("S2", "Rewrite divide() docstring to mention b must not be zero."), _source_step("S3", "Introduce a local quotient variable in divide() and return it.")]),
+        _change_plan("Advanced helper docstring test", [_source_step("S1", "Extract divide() divisor validation into _validate_divisor(b) and call it from divide()."), _source_step("S2", "Add a docstring to divide() explaining it divides a by b."), _test_step("S3", "Add a test for divide by zero.")]),
+        _change_plan("Advanced export type test", [_source_step("S1", "Add a module-level __all__ declaration and a zero-division guard for divide."), _source_step("S2", "Add type annotations to divide()."), _test_step("S3", "Add a test for divide by zero.")]),
+        _change_plan("Advanced quotient guard test", [_source_step("S1", "Add a zero-division guard to divide()."), _source_step("S2", "Introduce a local quotient variable in divide() and return it."), _test_step("S3", "Add a test for divide by zero.")]),
+        _change_plan("Advanced type helper test", [_source_step("S1", "Add type annotations and a zero-division guard to divide()."), _source_step("S2", "Extract divide() divisor validation into _validate_divisor(b) and call it from divide()."), _test_step("S3", "Add a test for divide by zero.")]),
+        _change_plan("Advanced export docstring test", [_source_step("S1", "Add a module-level __all__ declaration and a zero-division guard for divide."), _source_step("S2", "Rewrite divide() docstring to mention b must not be zero."), _test_step("S3", "Add a test for divide by zero.")]),
+        _change_plan("Advanced helper quotient test", [_source_step("S1", "Extract divide() divisor validation into _validate_divisor(b) and call it from divide()."), _source_step("S2", "Introduce a local quotient variable in divide() and return it."), _test_step("S3", "Add a test for divide by zero.")]),
+    ]
+    cases.extend(
+        PressureCase(f"advanced-change-plan {index:02d}", "change_plan", "PASS_CHANGE_PLAN", plan)
+        for index, plan in enumerate(advanced_change_plans, start=41)
+    )
     plan_only_tasks = [
         "Modify README.md to document the whole planner workflow.",
         "Refactor ai_coding_agent/workflow.py to support multi-file editing.",
         "Change ai_coding_agent/git_guard.py to loosen protected-file checks.",
         "Plan a repository-wide rename from add to add_numbers.",
         "Plan a feature that needs both math_tool.py and demo_add.py to change.",
+        "Plan-only analysis for protected workflow changes.",
+        "Plan a whole repo cleanup across source, tests, and documentation.",
+        "Plan a protected .gitignore workflow change without applying code changes.",
+        "Plan a multi-file release cleanup touching README.md, tests, and source files.",
     ]
     cases.extend(
         PressureCase(f"plan-only {index:02d}", "single", "PASS_PLAN_ONLY", task)
-        for index, task in enumerate(plan_only_tasks, start=41)
+        for index, task in enumerate(plan_only_tasks, start=46)
     )
     reject_plans = [
         _change_plan("Reject protected file", [{**_source_step("S1", "Change workflow"), "target_file": "ai_coding_agent/workflow.py"}], "none"),
@@ -132,17 +150,31 @@ def _cases() -> list[PressureCase]:
             ],
         ),
         _change_plan("Reject test file marked production", [{**_test_step("S1", "Add a test for divide by zero."), "allowed_change": "production_code"}]),
+        _change_plan("Reject missing target file", [{**_source_step("S1", "Change missing"), "target_file": "missing_math.py"}]),
+        _change_plan("Reject duplicate step ids", [_source_step("S1", "Add a zero-division guard to divide()."), _test_step("S1", "Add a test for divide by zero.")]),
+        _change_plan("Reject unsupported change type", [{**_source_step("S1", "Add a zero-division guard to divide()."), "allowed_change": "schema_change"}]),
+        _change_plan("Reject unsupported step test type", [{**_source_step("S1", "Add a zero-division guard to divide()."), "test_type": "nose"}]),
+        _change_plan("Reject unsupported final test type", [_source_step("S1", "Add a zero-division guard to divide().")], "nose"),
+        _change_plan("Reject production step targeting tests", [{**_test_step("S1", "Add a test for divide by zero."), "allowed_change": "production_code"}]),
+        _change_plan("Reject test step targeting source", [{**_source_step("S1", "Add a zero-division guard to divide()."), "allowed_change": "test_code"}]),
+        _change_plan("Reject empty step id", [{**_source_step("", "Add a zero-division guard to divide().")}]),
     ]
     cases.extend(
         PressureCase(f"reject {index:02d}", "change_plan", "PASS_REJECT", plan)
-        for index, plan in enumerate(reject_plans, start=46)
+        for index, plan in enumerate(reject_plans, start=53)
     )
-    rollback_plan = _change_plan(
-        "Rollback after valid step then invalid final test",
-        [_source_step("S1", "Add a zero-division guard to divide().")],
-        final_test_type="npm",
+    rollback_plans = [
+        _change_plan("Rollback after valid step then invalid final test", [_source_step("S1", "Add a zero-division guard to divide().")], final_test_type="npm"),
+        _change_plan("Rollback after valid two-step plan then invalid final test", [_source_step("S1", "Add a zero-division guard to divide()."), _test_step("S2", "Add a test for divide by zero.")], final_test_type="npm"),
+        _change_plan("Rollback after valid source then no-op source step", [_source_step("S1", "Add a zero-division guard to divide()."), _source_step("S2", "Add a zero-division guard to divide().")]),
+        _change_plan("Rollback after source change then unsupported final npm test", [_source_step("S1", "Add type annotations and a zero-division guard to divide().")], final_test_type="npm"),
+        _change_plan("Rollback after helper extraction then invalid final npm test", [_source_step("S1", "Extract divide() divisor validation into _validate_divisor(b) and call it from divide().")], final_test_type="npm"),
+    ]
+    cases.extend(
+        PressureCase(f"rollback {index:02d}", "change_plan", "PASS_ROLLBACK", plan)
+        for index, plan in enumerate(rollback_plans, start=70)
     )
-    cases.append(PressureCase("rollback 50", "change_plan", "PASS_ROLLBACK", rollback_plan))
+    cases.append(PressureCase("unknown fail-closed 75", "single", "PASS_REJECT", "Refactor unknown payment gateway behavior without naming a symbol or file."))
     return cases
 
 
@@ -192,7 +224,9 @@ def _classify(case: PressureCase, proc: subprocess.CompletedProcess[str], result
     if case.expected == "PASS_PLAN_ONLY":
         return "PASS_PLAN_ONLY" if proc.returncode == 0 and status == "plan_only" and not diff_text.strip() else "FAIL"
     if case.expected == "PASS_REJECT":
-        return "PASS_REJECT" if proc.returncode != 0 and status == "change_plan_failed" and not _git(["diff", "--name-only"]).stdout.strip() else "FAIL"
+        if proc.returncode == 0 or status not in {"change_plan_failed", "plan_failed"}:
+            return "FAIL"
+        return "PASS_REJECT" if not _git(["diff", "--name-only"]).stdout.strip() else "FAIL"
     if case.expected == "PASS_ROLLBACK":
         return "PASS_ROLLBACK" if proc.returncode != 0 and status == "change_plan_failed" and not _git(["diff", "--name-only"]).stdout.strip() else "FAIL"
     return "FAIL"

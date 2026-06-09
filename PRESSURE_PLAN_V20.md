@@ -17,7 +17,7 @@ The suite is intentionally mixed. A pass can mean a real patch, a valid plan-onl
 - `PASS_REJECT`: invalid or unsafe change plan was rejected before patching.
 - `PASS_ROLLBACK`: failure path restored the repo to `HEAD`.
 
-## 50 Increasing Pressure Tasks
+## 75 Increasing Pressure Tasks
 
 | # | Mode | Task | Expected |
 |---:|---|---|---|
@@ -72,12 +72,25 @@ The suite is intentionally mixed. A pass can mean a real patch, a valid plan-onl
 | 49 | reject | Change plan labels a test file as `production_code`. | `PASS_REJECT` |
 | 50 | rollback | Change plan has a valid first step but a failing second step; repo must restore to `HEAD`. | `PASS_ROLLBACK` |
 
+## Added High-Intensity Cases 51-75
+
+The executable runner extends the base 50 cases with 25 harder cases:
+
+| Range | Mode | Focus | Expected |
+|---:|---|---|---|
+| 41-48 | change-plan | Additional three-step source/test plans that verify prior step preservation across multiple patches. | `PASS_CHANGE_PLAN` |
+| 49-57 | plan-only | Protected workflow, protected ignore-file, multi-file, and whole-repo cleanup requests that must not patch code. | `PASS_PLAN_ONLY` |
+| 58-69 | reject | Missing targets, duplicate step IDs, empty step IDs, unsupported change types, unsupported test types, and prod/test file separation violations. | `PASS_REJECT` |
+| 70-74 | rollback | Valid early source/test steps followed by final-test or no-op failures; repo must restore to `HEAD`. | `PASS_ROLLBACK` |
+| 75 | fail-closed | Unknown task with no target file or symbol should fail closed without patching. | `PASS_REJECT` |
+
 ## Notes
 
 - Tasks 1-30 are single-file patch coverage and should remain runnable through `run_pressure_tests.py`.
-- Tasks 31-40 require authored `change_plan.json` inputs because the current Planner does not yet decompose natural language into minimal V2.0 steps.
-- Tasks 41-45 validate the V1.9 safety boundary.
-- Tasks 46-50 validate V2.0 validator and rollback behavior.
+- Tasks 31-48 require authored `change_plan.json` inputs because the current Planner does not yet decompose natural language into minimal V2.0 steps.
+- Tasks 49-57 validate the V1.9 safety boundary.
+- Tasks 58-74 validate V2.0 validator and rollback behavior.
+- Task 75 validates unknown-task fail-closed behavior.
 - The suite should not be scored by raw exit code alone. It must classify the expected result type.
 
 ## Recommended Runner Upgrade
