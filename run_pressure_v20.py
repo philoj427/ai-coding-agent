@@ -94,10 +94,10 @@ def _cases() -> list[PressureCase]:
     ]
     change_plans = [
         _change_plan("Add divide zero guard and tests", [_source_step("S1", "Add a zero-division guard to divide()."), _test_step("S2", "Add a test for divide by zero.")]),
-        _change_plan("Add divide type hints and test readability", [_source_step("S1", "Add type annotations to divide()."), _test_step("S2", "Add a test for divide by zero.")]),
-        _change_plan("Add divide docstring and normal test documentation", [_source_step("S1", "Add a docstring to divide() explaining it divides a by b."), _test_step("S2", "Add a test for divide by zero.")]),
+        _change_plan("Add divide type hints and zero-divisor test", [_source_step("S1", "Add type annotations and a zero-division guard to divide()."), _test_step("S2", "Add a test for divide by zero.")]),
+        _change_plan("Add divide docstring guard and zero-divisor test", [_source_step("S1", "Add a docstring and a zero-division guard to divide()."), _test_step("S2", "Add a test for divide by zero.")]),
         _change_plan("Extract divisor validation and test zero divisor", [_source_step("S1", "Extract divide() divisor validation into _validate_divisor(b) and call it from divide()."), _test_step("S2", "Add a test for divide by zero.")]),
-        _change_plan("Add source export and import-oriented test", [_source_step("S1", "Add a module-level __all__ declaration that exports divide."), _test_step("S2", "Add a test for divide by zero.")]),
+        _change_plan("Add source export guard and import-oriented test", [_source_step("S1", "Add a module-level __all__ declaration and a zero-division guard for divide."), _test_step("S2", "Add a test for divide by zero.")]),
         _change_plan("Three-step guard docstring and test", [_source_step("S1", "Add a zero-division guard to divide()."), _source_step("S2", "Rewrite divide() docstring to mention b must not be zero."), _test_step("S3", "Add a test for divide by zero.")]),
         _change_plan("Three-step type hints quotient and test", [_source_step("S1", "Add type annotations to divide()."), _source_step("S2", "Introduce a local quotient variable in divide() and return it."), _test_step("S3", "Add a test for divide by zero.")]),
         _change_plan("Three-step helper extraction and test", [_source_step("S1", "Extract divide() divisor validation into _validate_divisor(b) and call it from divide()."), _source_step("S2", "Add a docstring to divide() explaining it divides a by b."), _test_step("S3", "Add a test for divide by zero.")]),

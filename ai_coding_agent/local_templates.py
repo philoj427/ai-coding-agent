@@ -141,7 +141,7 @@ def _render_demo_add(description: str) -> str:
     return "\n\n".join(parts) + "\n"
 
 
-def _render_math_tool(description: str) -> str:
+def _render_math_tool(description: str, original: str = "") -> str:
     desc = description.lower()
     module_doc = "Small math helpers."
     function_doc = "Return a divided by b."
@@ -151,7 +151,13 @@ def _render_math_tool(description: str) -> str:
     validation = ""
     return_block = "return a / b"
 
-    if "__all__" in desc:
+    preserve_zero_guard = 'raise ValueError("b must not be zero")' in original
+    preserve_helper = "def _validate_divisor" in original
+    preserve_all = "__all__" in original
+    preserve_type_hints = "def divide(a: int | float, b: int | float) -> int | float:" in original
+    preserve_quotient = "quotient = a / b" in original
+
+    if "__all__" in desc or preserve_all:
         extras.append('__all__ = ["divide"]')
 
     if "docstring" in desc and "must not be zero" in desc:
@@ -159,13 +165,13 @@ def _render_math_tool(description: str) -> str:
     elif "docstring" in desc:
         function_doc = "Divide a by b and return the quotient."
 
-    if "type annotations" in desc:
+    if "type annotations" in desc or preserve_type_hints:
         signature = "def divide(a: int | float, b: int | float) -> int | float:"
 
-    if "zero-division guard" in desc or "valueerror" in desc or "b is zero" in desc:
+    if "zero-division guard" in desc or "valueerror" in desc or "b is zero" in desc or preserve_zero_guard:
         validation = 'if b == 0:\n        raise ValueError("b must not be zero")'
 
-    if "_validate_divisor" in desc or "divisor validation" in desc:
+    if "_validate_divisor" in desc or "divisor validation" in desc or preserve_helper:
         helper_blocks.append(
             "def _validate_divisor(b):\n"
             "    if b == 0:\n"
@@ -173,7 +179,7 @@ def _render_math_tool(description: str) -> str:
         )
         validation = "_validate_divisor(b)"
 
-    if "quotient variable" in desc:
+    if "quotient variable" in desc or preserve_quotient:
         return_block = "quotient = a / b\n    return quotient"
 
     if "comment above divide" in desc or "covered by tests" in desc:
@@ -223,7 +229,7 @@ def build_local_template_patch(root: Path, task: TaskSpec) -> str | None:
     if task.target_file.as_posix() == "demo_add.py":
         replacement = _render_demo_add(task.description)
     elif task.target_file.as_posix() == "math_tool.py":
-        replacement = _render_math_tool(task.description)
+        replacement = _render_math_tool(task.description, original)
     else:
         replacement = _render_test_math_tool(task.description)
     if original == replacement:
