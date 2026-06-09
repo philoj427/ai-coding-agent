@@ -57,10 +57,10 @@ The suite is intentionally mixed. A pass can mean a real patch, a valid plan-onl
 | 34 | change-plan | Two-step plan: add `_validate_divisor(b)`, then add a zero-divisor test. | `PASS_CHANGE_PLAN` |
 | 35 | change-plan | Two-step plan: add source `__all__`, then add a test that imports the exported symbol. | `PASS_CHANGE_PLAN` |
 | 36 | change-plan | Three-step plan: source guard, source docstring, test for zero division. | `PASS_CHANGE_PLAN` |
-| 37 | change-plan | Three-step plan: source type hints, source quotient variable, test still verifies normal division. | `PASS_CHANGE_PLAN` |
+| 37 | change-plan | Three-step plan: source type hints plus zero guard, source quotient variable, zero-division test. | `PASS_CHANGE_PLAN` |
 | 38 | change-plan | Three-step plan: source helper extraction, test zero division, final full unittest. | `PASS_CHANGE_PLAN` |
 | 39 | change-plan | Three-step plan with two allowed files only; verify no third file appears in `git diff --name-only`. | `PASS_CHANGE_PLAN` |
-| 40 | change-plan | Three-step plan that intentionally keeps every step single-file while changing both source and test. | `PASS_CHANGE_PLAN` |
+| 40 | change-plan | Three-step plan that keeps every step single-file while adding type hints, zero guard, docstring, and test coverage. | `PASS_CHANGE_PLAN` |
 | 41 | plan-only | Ask to modify `README.md` with project-wide workflow documentation. | `PASS_PLAN_ONLY` |
 | 42 | plan-only | Ask to refactor `ai_coding_agent/workflow.py`. | `PASS_PLAN_ONLY` |
 | 43 | plan-only | Ask to loosen `ai_coding_agent/git_guard.py`. | `PASS_PLAN_ONLY` |
