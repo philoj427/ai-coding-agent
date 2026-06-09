@@ -34,7 +34,8 @@ Optional flags:
 
 ## Current Status
 
-- Latest 50-task pressure run: `50 passed, 0 failed`
+- Latest V1.9 50-task pressure run: `50 passed, 0 failed`
+- Pressure run classification: 40 real code patch passes, 10 plan-only safety passes, 0 no-diff passes
 - Latest validation: `python -m unittest discover -s tests` passed with 49 tests
 - V1.8 Project Index lets Planner map symbols to target and test files
 - V1.9 adds plan-only output for high-risk tasks
