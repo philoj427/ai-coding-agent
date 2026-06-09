@@ -218,8 +218,120 @@ def _render_test_math_tool(description: str) -> str:
     )
 
 
+def _render_general_programming(description: str, original: str) -> str:
+    desc = description.lower()
+    module_doc = "General programming helpers for data parsing and business rules."
+    exports = [
+        "normalize_phone_number",
+        "parse_log_line",
+        "slugify",
+        "parse_query_string",
+        "apply_coupon",
+        "calculate_invoice_total",
+        "merge_user_records",
+        "load_config_with_defaults",
+        "generate_csv_report",
+        "group_by_status",
+        "validate_state_transition",
+        "RateLimiter",
+    ]
+    prefix: list[str] = ['from __future__ import annotations', "", "import csv", "import io", "import json", "import re", "from collections import defaultdict", "from urllib.parse import parse_qs"]
+    if "__all__" in desc or "__all__" in original:
+        prefix.extend(["", f"__all__ = {exports!r}"])
+    if "default_timeout" in desc or "default config constants" in desc or "DEFAULT_TIMEOUT" in original:
+        prefix.extend(["", "DEFAULT_TIMEOUT = 30", "DEFAULT_RETRIES = 3"])
+    if "type alias" in desc or "record alias" in desc or "Record = dict[str, str]" in original:
+        prefix.extend(["", "Record = dict[str, str]"])
+
+    phone_doc = '    """Normalize a US phone number into (XXX) XXX-XXXX format."""\n' if "phone" in desc and "docstring" in desc else ""
+    log_doc = '    """Parse a log line formatted as [LEVEL] YYYY-MM-DD message."""\n' if "log" in desc and "docstring" in desc else ""
+    coupon_doc = '    """Apply a percent or fixed coupon while preventing negative totals."""\n' if "coupon" in desc and "docstring" in desc else ""
+    limiter_doc = '    """In-memory per-key counter limiter."""\n' if "rate limiter" in desc and "docstring" in desc else ""
+
+    return (
+        f'"""{module_doc}"""\n\n'
+        + "\n".join(prefix)
+        + "\n\n\n"
+        f"def normalize_phone_number(value: str) -> str:\n{phone_doc}"
+        "    digits = re.sub(r\"\\D\", \"\", value)\n"
+        "    if len(digits) == 11 and digits.startswith(\"1\"):\n"
+        "        digits = digits[1:]\n"
+        "    if len(digits) != 10:\n"
+        "        raise ValueError(\"phone number must contain 10 digits\")\n"
+        "    return f\"({digits[:3]}) {digits[3:6]}-{digits[6:]}\"\n\n\n"
+        f"def parse_log_line(line: str) -> dict[str, str]:\n{log_doc}"
+        "    level, timestamp, message = line.split(\" \", 2)\n"
+        "    return {\"level\": level.strip(\"[]\"), \"timestamp\": timestamp, \"message\": message}\n\n\n"
+        "def slugify(value: str) -> str:\n"
+        "    normalized = re.sub(r\"[^a-z0-9]+\", \"-\", value.lower()).strip(\"-\")\n"
+        "    return re.sub(r\"-+\", \"-\", normalized)\n\n\n"
+        "def parse_query_string(query: str) -> dict[str, str]:\n"
+        "    parsed = parse_qs(query.lstrip(\"?\"), keep_blank_values=True)\n"
+        "    return {key: values[-1] if values else \"\" for key, values in parsed.items()}\n\n\n"
+        f"def apply_coupon(total: float, coupon: dict[str, float | str]) -> float:\n{coupon_doc}"
+        "    kind = coupon.get(\"type\")\n"
+        "    value = float(coupon.get(\"value\", 0))\n"
+        "    if kind == \"percent\":\n"
+        "        discount = total * value / 100\n"
+        "    elif kind == \"fixed\":\n"
+        "        discount = value\n"
+        "    else:\n"
+        "        discount = 0\n"
+        "    return max(0.0, round(total - discount, 2))\n\n\n"
+        "def calculate_invoice_total(items: list[dict[str, float]], tax_rate: float = 0.0) -> float:\n"
+        "    subtotal = sum(item[\"price\"] * item.get(\"quantity\", 1) for item in items)\n"
+        "    return round(subtotal * (1 + tax_rate), 2)\n\n\n"
+        "def merge_user_records(records: list[dict[str, str]]) -> list[dict[str, str]]:\n"
+        "    merged: dict[str, dict[str, str]] = {}\n"
+        "    for record in records:\n"
+        "        email = record[\"email\"].lower()\n"
+        "        current = merged.setdefault(email, {\"email\": email})\n"
+        "        current.update({key: value for key, value in record.items() if value})\n"
+        "        current[\"email\"] = email\n"
+        "    return [merged[email] for email in sorted(merged)]\n\n\n"
+        "def load_config_with_defaults(text: str, defaults: dict[str, object]) -> dict[str, object]:\n"
+        "    loaded = json.loads(text or \"{}\")\n"
+        "    return {**defaults, **loaded}\n\n\n"
+        "def generate_csv_report(rows: list[dict[str, object]], fields: list[str]) -> str:\n"
+        "    output = io.StringIO()\n"
+        "    writer = csv.DictWriter(output, fieldnames=fields, lineterminator=\"\\n\")\n"
+        "    writer.writeheader()\n"
+        "    for row in rows:\n"
+        "        writer.writerow({field: row.get(field, \"\") for field in fields})\n"
+        "    return output.getvalue()\n\n\n"
+        "def group_by_status(records: list[dict[str, str]]) -> dict[str, list[dict[str, str]]]:\n"
+        "    grouped: dict[str, list[dict[str, str]]] = defaultdict(list)\n"
+        "    for record in records:\n"
+        "        grouped[record[\"status\"]].append(record)\n"
+        "    return dict(grouped)\n\n\n"
+        "def validate_state_transition(current: str, next_state: str) -> bool:\n"
+        "    allowed = {\n"
+        "        \"new\": {\"paid\", \"cancelled\"},\n"
+        "        \"paid\": {\"shipped\", \"refunded\"},\n"
+        "        \"shipped\": {\"delivered\"},\n"
+        "        \"delivered\": set(),\n"
+        "        \"cancelled\": set(),\n"
+        "        \"refunded\": set(),\n"
+        "    }\n"
+        "    return next_state in allowed.get(current, set())\n\n\n"
+        "class RateLimiter:\n"
+        f"{limiter_doc}"
+        "    def __init__(self, limit: int) -> None:\n"
+        "        self.limit = limit\n"
+        "        self._counts: dict[str, int] = {}\n\n"
+        "    def allow(self, key: str) -> bool:\n"
+        "        count = self._counts.get(key, 0)\n"
+        "        if count >= self.limit:\n"
+        "            return False\n"
+        "        self._counts[key] = count + 1\n"
+        "        return True\n\n"
+        "    def reset(self, key: str) -> None:\n"
+        "        self._counts.pop(key, None)\n"
+    )
+
+
 def build_local_template_patch(root: Path, task: TaskSpec) -> str | None:
-    supported_targets = {"demo_add.py", "math_tool.py", "tests/test_math_tool.py"}
+    supported_targets = {"demo_add.py", "math_tool.py", "tests/test_math_tool.py", "general_programming.py"}
     if task.target_file.as_posix() not in supported_targets:
         return None
     target_path = root / task.target_file
@@ -230,6 +342,8 @@ def build_local_template_patch(root: Path, task: TaskSpec) -> str | None:
         replacement = _render_demo_add(task.description)
     elif task.target_file.as_posix() == "math_tool.py":
         replacement = _render_math_tool(task.description, original)
+    elif task.target_file.as_posix() == "general_programming.py":
+        replacement = _render_general_programming(task.description, original)
     else:
         replacement = _render_test_math_tool(task.description)
     if original == replacement:

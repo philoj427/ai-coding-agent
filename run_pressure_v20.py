@@ -56,6 +56,38 @@ def _single_tasks() -> list[str]:
     ]
 
 
+def _general_programming_tasks() -> list[str]:
+    prefix = "general_programming.py | unittest | tests/test_general_programming.py | "
+    tasks = [
+        "Add a module docstring describing the general programming helpers.",
+        "Add __all__ exports for all public general programming helpers.",
+        "Add DEFAULT_TIMEOUT and DEFAULT_RETRIES config constants.",
+        "Add a Record type alias for dictionary records.",
+        "Add a docstring to normalize_phone_number().",
+        "Add a docstring to parse_log_line().",
+        "Add a docstring to apply_coupon().",
+        "Add a docstring to the RateLimiter class.",
+        "Add __all__ and default config constants together.",
+        "Add __all__ and the Record type alias together.",
+        "Add default config constants and the Record type alias together.",
+        "Add phone and log parser docstrings together.",
+        "Add coupon and rate limiter docstrings together.",
+        "Add __all__, default config constants, and the Record alias.",
+        "Document normalize_phone_number and preserve its ValueError behavior.",
+        "Document parse_query_string behavior while preserving repeated-key handling.",
+        "Document generate_csv_report behavior while preserving line terminators.",
+        "Document merge_user_records behavior while preserving lowercase email merge.",
+        "Document validate_state_transition while preserving terminal states.",
+        "Document group_by_status while preserving grouped lists.",
+        "Add module exports and parser docstrings in one patch.",
+        "Add config constants and business logic docstrings in one patch.",
+        "Add Record alias and data transform docstrings in one patch.",
+        "Add module exports, constants, and rate limiter documentation.",
+        "Add all general helper documentation without changing runtime behavior.",
+    ]
+    return [prefix + task for task in tasks]
+
+
 def _change_plan(task: str, steps: list[dict[str, Any]], final_test_type: str = "unittest") -> dict[str, Any]:
     return {
         "task": task,
@@ -175,6 +207,10 @@ def _cases() -> list[PressureCase]:
         for index, plan in enumerate(rollback_plans, start=70)
     )
     cases.append(PressureCase("unknown fail-closed 75", "single", "PASS_REJECT", "Refactor unknown payment gateway behavior without naming a symbol or file."))
+    cases.extend(
+        PressureCase(f"general-programming {index:03d}", "single", "PASS_PATCH", task)
+        for index, task in enumerate(_general_programming_tasks(), start=76)
+    )
     return cases
 
 

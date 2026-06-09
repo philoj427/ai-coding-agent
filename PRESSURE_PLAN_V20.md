@@ -17,7 +17,7 @@ The suite is intentionally mixed. A pass can mean a real patch, a valid plan-onl
 - `PASS_REJECT`: invalid or unsafe change plan was rejected before patching.
 - `PASS_ROLLBACK`: failure path restored the repo to `HEAD`.
 
-## 75 Increasing Pressure Tasks
+## 100 Increasing Pressure Tasks
 
 | # | Mode | Task | Expected |
 |---:|---|---|---|
@@ -84,6 +84,18 @@ The executable runner extends the base 50 cases with 25 harder cases:
 | 70-74 | rollback | Valid early source/test steps followed by final-test failures; repo must restore to `HEAD`. | `PASS_ROLLBACK` |
 | 75 | fail-closed | Unknown task with no target file or symbol should fail closed without patching. | `PASS_REJECT` |
 
+## Added General Programming Cases 76-100
+
+The final 25 cases target a broader engineering benchmark file, `general_programming.py`, with tests in `tests/test_general_programming.py`.
+
+| Range | Mode | Focus | Expected |
+|---:|---|---|---|
+| 76-80 | single-file | Module docs, exports, config constants, and record aliases. | `PASS_PATCH` |
+| 81-85 | single-file | Function/class documentation for phone parsing, log parsing, coupon logic, and rate limiting. | `PASS_PATCH` |
+| 86-90 | single-file | Combined non-functional documentation/export changes that must preserve behavior. | `PASS_PATCH` |
+| 91-95 | single-file | Documentation for parser/data-transform/state helpers with edge-case preservation. | `PASS_PATCH` |
+| 96-100 | single-file | Multi-intent general helper documentation and constants changes in one safe patch. | `PASS_PATCH` |
+
 ## Notes
 
 - Tasks 1-30 are single-file patch coverage and should remain runnable through `run_pressure_tests.py`.
@@ -91,6 +103,7 @@ The executable runner extends the base 50 cases with 25 harder cases:
 - Tasks 49-57 validate the V1.9 safety boundary.
 - Tasks 58-74 validate V2.0 validator and rollback behavior.
 - Task 75 validates unknown-task fail-closed behavior.
+- Tasks 76-100 validate broader general programming helper coverage: string parsing, query parsing, coupon logic, invoice totals, CSV reporting, config loading, grouping, state transitions, and rate limiting.
 - The suite should not be scored by raw exit code alone. It must classify the expected result type.
 
 ## Recommended Runner Upgrade
