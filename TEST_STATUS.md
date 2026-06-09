@@ -46,12 +46,12 @@
 ## Latest V2.0 Pressure Run
 
 - Run: `python .\run_pressure_v20.py`
-- Result: 50 cases passed, 0 failed
+- Result: 75 cases passed, 0 failed
 - `PASS_PATCH`: 30
-- `PASS_CHANGE_PLAN`: 10
-- `PASS_PLAN_ONLY`: 5
-- `PASS_REJECT`: 4
-- `PASS_ROLLBACK`: 1
+- `PASS_CHANGE_PLAN`: 18
+- `PASS_PLAN_ONLY`: 9
+- `PASS_REJECT`: 13
+- `PASS_ROLLBACK`: 5
 - `FAIL`: 0
 
 ## Safety Coverage
